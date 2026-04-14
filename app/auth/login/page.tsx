@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { useAuth } from "@/app/providers/AuthProvider"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -10,6 +11,7 @@ import Link from "next/link"
 
 export default function LoginPage() {
   const router = useRouter()
+  const { login } = useAuth()
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
   const [loading, setLoading] = useState(false)
@@ -34,9 +36,8 @@ export default function LoginPage() {
         const data = await response.json()
         setMessage("Login Berhasil!")
         
-        if (data.userId && data.username) {
-          localStorage.setItem("userId", data.userId)
-          localStorage.setItem("username", data.username)
+        if (data.token) {
+          login(data.token, username)
         }
 
         router.push("/dashboard")
@@ -62,11 +63,11 @@ export default function LoginPage() {
         <form onSubmit={handleLogin}>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="username">Username</Label>
+              <Label htmlFor="username">Username/Email</Label>
               <Input 
                 id="username" 
                 type="text" 
-                placeholder="username" 
+                placeholder="username/email" 
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required 
