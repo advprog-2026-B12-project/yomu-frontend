@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { useAuth } from "@/app/providers/AuthProvider"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -10,28 +9,41 @@ import { Label } from "@/components/ui/label"
 
 const ALPHANUMERIC = /^[a-zA-Z0-9]*$/
 
-export default function SettingsPage() {
+export default function CompleteRegistrationPage() {
   const router = useRouter()
-  const { username, isLoading, logout } = useAuth()
 
+  const [email, setEmail] = useState("")
   const [displayName, setDisplayName] = useState("")
-  const [newUsername, setNewUsername] = useState("")
-  const [oldPassword, setOldPassword] = useState("")
-  const [newPassword, setNewPassword] = useState("")
+  const [username, setUsername] = useState("")
+  const [password, setPassword] = useState("")
   const [usernameError, setUsernameError] = useState("")
   const [message, setMessage] = useState("")
   const [isError, setIsError] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [isReady, setIsReady] = useState(false)
 
   useEffect(() => {
-    if (!isLoading && !username) {
-      router.push("/")
+    const raw = sessionStorage.getItem("sso_pending")
+    if (!raw) {
+      router.replace("/auth/login")
+      return
     }
-  }, [isLoading, username, router])
+
+    try {
+      const { email, googleName } = JSON.parse(raw) as { email: string; googleName: string }
+      setEmail(email)
+      setDisplayName(googleName)
+    } catch {
+      router.replace("/auth/login")
+      return
+    }
+
+    setIsReady(true)
+  }, [router])
 
   const handleUsernameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value
-    setNewUsername(val)
+    setUsername(val)
     setUsernameError(
       val && !ALPHANUMERIC.test(val)
         ? "Username hanya boleh mengandung huruf dan angka (tanpa spasi atau karakter khusus)."
@@ -46,43 +58,29 @@ export default function SettingsPage() {
     setLoading(true)
     setMessage("")
 
-    const token = localStorage.getItem("token")
-
-    const body: Record<string, string> = {}
-    if (displayName) body.displayName = displayName
-    if (newUsername) body.username = newUsername
-    if (oldPassword) body.oldPassword = oldPassword
-    if (newPassword) body.newPassword = newPassword
-
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL
-      const response = await fetch(`${apiUrl}/api/users/profile`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`,
-        },
-        body: JSON.stringify(body),
+
+      const payload = { displayName, username, email, password }
+      console.log("[SSO Complete Registration] Payload:", payload)
+
+      const response = await fetch(`${apiUrl}/api/auth/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
       })
 
-      if (response.status === 401) {
-        logout()
-        return
-      }
-
       if (response.ok) {
-        // Sync localStorage before navigating so AuthProvider reads the
-        // correct values on the next mount.
-        if (newUsername) localStorage.setItem("username", newUsername)
-        if (displayName) localStorage.setItem("displayName", displayName)
+        sessionStorage.removeItem("sso_pending")
         setIsError(false)
-        setMessage("Profil berhasil diperbarui!")
-        setOldPassword("")
-        setNewPassword("")
-        router.push("/")
+        setMessage("Akun berhasil dibuat! Mengarahkan ke halaman login...")
+        setTimeout(() => router.push("/"), 2000)
       } else {
+        const data = await response.json().catch(() => null)
         setIsError(true)
-        setMessage("Gagal memperbarui profil. Cek kembali data yang dimasukkan.")
+        setMessage(
+          data?.message ?? "Pendaftaran gagal. Kemungkinan username/email sudah dipakai."
+        )
       }
     } catch {
       setIsError(true)
@@ -92,39 +90,52 @@ export default function SettingsPage() {
     }
   }
 
-  if (isLoading || !username) return null
+  if (!isReady) return null
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4">
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle className="text-2xl font-bold text-center">Pengaturan Profil</CardTitle>
+          <CardTitle className="text-2xl font-bold text-center">Lengkapi Profil</CardTitle>
           <CardDescription className="text-center">
-            Kosongkan field yang tidak ingin diubah.
+            Satu langkah lagi untuk menyelesaikan pendaftaran via Google.
           </CardDescription>
         </CardHeader>
 
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="displayName">Display Name</Label>
+              <Label htmlFor="email">Email</Label>
               <Input
-                id="displayName"
-                type="text"
-                placeholder={username}
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
+                id="email"
+                type="email"
+                value={email}
+                disabled
+                className="bg-gray-100 cursor-not-allowed"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="newUsername">Username</Label>
+              <Label htmlFor="displayName">Display Name</Label>
               <Input
-                id="newUsername"
+                id="displayName"
                 type="text"
-                placeholder={username}
-                value={newUsername}
+                placeholder="Nama tampilan"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="username">Username</Label>
+              <Input
+                id="username"
+                type="text"
+                placeholder="username (huruf & angka)"
+                value={username}
                 onChange={handleUsernameChange}
+                required
               />
               {usernameError && (
                 <p className="text-xs text-red-500">{usernameError}</p>
@@ -132,24 +143,14 @@ export default function SettingsPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="oldPassword">Password Lama</Label>
+              <Label htmlFor="password">Password</Label>
               <Input
-                id="oldPassword"
+                id="password"
                 type="password"
                 placeholder="••••••••"
-                value={oldPassword}
-                onChange={(e) => setOldPassword(e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="newPassword">Password Baru</Label>
-              <Input
-                id="newPassword"
-                type="password"
-                placeholder="••••••••"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
               />
             </div>
 
@@ -161,8 +162,12 @@ export default function SettingsPage() {
           </CardContent>
 
           <CardFooter>
-            <Button type="submit" className="w-full" disabled={loading || !!usernameError}>
-              {loading ? "Menyimpan..." : "Simpan Perubahan"}
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={loading || !!usernameError}
+            >
+              {loading ? "Mendaftar..." : "Selesaikan Pendaftaran"}
             </Button>
           </CardFooter>
         </form>

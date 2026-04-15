@@ -2,19 +2,36 @@
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
+import { GoogleOAuthProvider } from "@react-oauth/google"
+
+export interface UserInfo {
+  userId: string
+  username: string
+  displayName: string
+}
 
 interface AuthContextValue {
+  userId: string
   username: string
+  displayName: string
   isLoading: boolean
-  login: (token: string, username: string) => void
+  login: (token: string, user: UserInfo) => void
   logout: () => void
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
 
+const LS_KEYS = ["token", "userId", "username", "displayName"] as const
+
+function clearStorage() {
+  LS_KEYS.forEach((k) => localStorage.removeItem(k))
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter()
+  const [userId, setUserId] = useState("")
   const [username, setUsername] = useState("")
+  const [displayName, setDisplayName] = useState("")
   const [isLoading, setIsLoading] = useState(true)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -28,29 +45,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (msUntilExpiry <= 0) return
       if (timerRef.current) clearTimeout(timerRef.current)
       timerRef.current = setTimeout(() => logout(), msUntilExpiry)
-    } catch {
-      
-    }
+    } catch {}
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const logout = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current)
-    localStorage.removeItem("token")
-    localStorage.removeItem("username")
+    clearStorage()
+    setUserId("")
     setUsername("")
+    setDisplayName("")
     router.push("/")
   }, [router])
 
-  const login = useCallback((token: string, newUsername: string) => {
+  const login = useCallback((token: string, user: UserInfo) => {
+    if (!user.username) throw new Error("login() called with missing username")
     localStorage.setItem("token", token)
-    localStorage.setItem("username", newUsername)
-    setUsername(newUsername)
+    localStorage.setItem("userId", user.userId)
+    localStorage.setItem("username", user.username)
+    localStorage.setItem("displayName", user.displayName)
+    setUserId(user.userId)
+    setUsername(user.username)
+    setDisplayName(user.displayName)
     scheduleAutoLogout(token)
   }, [scheduleAutoLogout])
 
   useEffect(() => {
     const token = localStorage.getItem("token")
-    const storedUsername = localStorage.getItem("username")
+    const storedUserId = localStorage.getItem("userId") ?? ""
+    const storedUsername = localStorage.getItem("username") ?? ""
+    const storedDisplayName = localStorage.getItem("displayName") ?? ""
 
     if (!token || !storedUsername) {
       setIsLoading(false)
@@ -64,17 +88,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const nowSeconds = Math.floor(Date.now() / 1000)
 
       if (exp && exp < nowSeconds) {
-        localStorage.removeItem("token")
-        localStorage.removeItem("username")
+        clearStorage()
         setIsLoading(false)
         return
       }
 
+      setUserId(storedUserId)
       setUsername(storedUsername)
+      setDisplayName(storedDisplayName)
       scheduleAutoLogout(token)
     } catch {
-      localStorage.removeItem("token")
-      localStorage.removeItem("username")
+      clearStorage()
     }
 
     setIsLoading(false)
@@ -82,12 +106,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current)
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   return (
-    <AuthContext.Provider value={{ username, isLoading, login, logout }}>
-      {children}
-    </AuthContext.Provider>
+    <GoogleOAuthProvider clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? ""}>
+      <AuthContext.Provider value={{ userId, username, displayName, isLoading, login, logout }}>
+        {children}
+      </AuthContext.Provider>
+    </GoogleOAuthProvider>
   )
 }
 
