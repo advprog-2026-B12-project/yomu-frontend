@@ -1,33 +1,21 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect } from "react"
 import { useRouter } from "next/navigation"
+import { useAuth } from "@/app/providers/AuthProvider"
 import { Button } from "@/components/ui/button"
 
 export default function DashboardPage() {
   const router = useRouter()
-  const [username, setUsername] = useState("")
+  const { username, isLoading, logout } = useAuth()
 
   useEffect(() => {
-    const storedUsername = localStorage.getItem("username")
-    
-    if (!storedUsername) {
-      console.log("Balik ke login!")
+    if (!isLoading && !username) {
       router.push("/")
-    } else {
-      setUsername(storedUsername)
     }
-  }, [router])
+  }, [isLoading, username, router])
 
-  const handleLogout = () => {
-    localStorage.removeItem("userId")
-    localStorage.removeItem("username")
-    
-    console.log("Sesi dihapus, balik ke login!")
-    router.push("/")
-  }
-
-  if (!username) return null 
+  if (isLoading || !username) return null
 
   return (
     <div className="flex flex-col min-h-screen items-center justify-center bg-gray-50 p-4">
@@ -35,8 +23,8 @@ export default function DashboardPage() {
         <h1 className="text-3xl font-bold text-gray-900 mb-2">
           Halo, <span className="text-blue-600">{username}</span>! 👋
         </h1>
-        
-        <Button variant="destructive" className="w-full" onClick={handleLogout}>
+
+        <Button variant="destructive" className="w-full" onClick={logout}>
           Keluar (Logout)
         </Button>
       </div>
