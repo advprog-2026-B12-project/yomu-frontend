@@ -24,6 +24,10 @@ export default function DashboardPage() {
           Halo, <span className="text-blue-600">{username}</span>! 👋
         </h1>
 
+        <Button className="w-full mb-3" onClick={() => router.push("/achievements")}>
+          Lihat Achievements
+        </Button>
+
         <Button variant="destructive" className="w-full" onClick={logout}>
           Keluar (Logout)
         </Button>
