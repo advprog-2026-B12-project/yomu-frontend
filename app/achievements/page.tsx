@@ -22,7 +22,13 @@ export default function AchievementsPage() {
   }, [isLoading, username, router])
 
   useEffect(() => {
-    if (isLoading || !userId) return
+    if (isLoading) return
+
+    if (!userId) {
+      setIsFetching(false)
+      setError("Sesi pengguna tidak valid. Silakan login ulang.")
+      return
+    }
 
     let mounted = true
     setIsFetching(true)
