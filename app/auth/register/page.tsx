@@ -15,13 +15,31 @@ export default function RegisterPage() {
   const [username, setUsername] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  
+  const [usernameError, setUsernameError] = useState("")
+
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState("")
+
+  const ALPHANUMERIC = /^[a-zA-Z0-9]*$/
+
+  const handleUsernameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value
+    setUsername(val)
+    setUsernameError(
+      val && !ALPHANUMERIC.test(val)
+        ? "Username hanya boleh mengandung huruf dan angka (tanpa spasi atau karakter khusus)."
+        : ""
+    )
+  }
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault() 
     setLoading(true)
+
+    if (usernameError) {
+      setLoading(false)
+      return
+    }
 
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL
@@ -78,14 +96,17 @@ export default function RegisterPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="username">Username</Label>
-              <Input 
-                id="username" 
-                type="text" 
-                placeholder="username" 
+              <Input
+                id="username"
+                type="text"
+                placeholder="username"
                 value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                required 
+                onChange={handleUsernameChange}
+                required
               />
+              {usernameError && (
+                <p className="text-xs text-red-500">{usernameError}</p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
