@@ -2,6 +2,7 @@
 
 import { useEffect, useState, use } from "react"
 import { Button } from "@/components/ui/button"
+import { useAuth } from "@/app/providers/AuthProvider"
 
 type Option = {
     id: string
@@ -23,6 +24,7 @@ type Reading = {
 }
 
 type QuizSubmitRequest = {
+    userId: string
     readingId: string
     answers: {
         questionId: string
@@ -49,6 +51,7 @@ export default function QuizPage({
     params: Promise<{ readingId: string }>
 }) {
     const { readingId } = use(params)
+    const { userId } = useAuth()
     const [reading, setReading] = useState<Reading | null>(null)
     const [started, setStarted] = useState(false)
     const [answers, setAnswers] = useState<Record<string, string>>({})
@@ -73,10 +76,17 @@ export default function QuizPage({
     async function handleSubmit() {
         if (!reading) return
 
+        const formattedAnswers = Object.entries(answers).map(
+            ([questionId, optionId]) => ({
+                questionId,
+                optionId,
+            })
+        )
+
         const payload: QuizSubmitRequest = {
-            userId: "123e4567-e89b-12d3-a456-426614174000",
+            userId: userId,
             readingId: reading.id,
-            answers: answers,
+            answers: formattedAnswers,
         }
 
         try {
