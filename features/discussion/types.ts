@@ -2,11 +2,15 @@ export type Comment = {
   id: string;
   readingId: string;
   authorId: string;
-  parent: Comment | null;
+  parentId: string | null;
   content: string;
   deleted: boolean;
-  deletedBy: string | null;
-  deletedAt: string | null;
   createdAt: string;
   updatedAt: string;
+  editedAt: string | null;
+  replies: Comment[];
+};
+
+export type CommentRequest = {
+  content: string;
 };
