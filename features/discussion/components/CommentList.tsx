@@ -1,11 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { MessageSquare } from "lucide-react";
+import { useAuth } from "@/app/providers/AuthProvider";
 import { Skeleton } from "@/components/ui/skeleton";
-import { fetchComments } from "../api";
+import { ApiError, createComment, fetchComments, replyToComment } from "../api";
 import { Comment } from "../types";
 import { CommentCard } from "./CommentCard";
+import { CommentForm } from "./CommentForm";
 
 interface CommentListProps {
   readingId: string;
@@ -26,7 +30,7 @@ function CommentSkeleton() {
 
 function EmptyState() {
   return (
-    <div className="flex flex-col items-center justify-center py-20 gap-3 text-muted-foreground">
+    <div className="flex flex-col items-center justify-center py-16 gap-3 text-muted-foreground">
       <MessageSquare className="size-10 opacity-30" />
       <p className="text-sm">Belum ada komentar. Jadilah yang pertama!</p>
     </div>
@@ -34,45 +38,111 @@ function EmptyState() {
 }
 
 export function CommentList({ readingId }: CommentListProps) {
+  const router = useRouter();
+  const { userId, username, isLoading: authLoading, logout } = useAuth();
+
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const isLoggedIn = Boolean(username);
 
-  useEffect(() => {
+  const loadComments = useCallback(async () => {
     setLoading(true);
     setError(null);
-    fetchComments(readingId)
-      .then(setComments)
-      .catch((err: Error) => setError(err.message))
-      .finally(() => setLoading(false));
+    try {
+      const data = await fetchComments(readingId);
+      setComments(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Gagal memuat komentar.");
+    } finally {
+      setLoading(false);
+    }
   }, [readingId]);
 
-  if (loading) {
-    return (
-      <div className="flex flex-col gap-4">
-        {Array.from({ length: 3 }).map((_, i) => (
-          <CommentSkeleton key={i} />
-        ))}
-      </div>
-    );
-  }
+  useEffect(() => {
+    loadComments();
+  }, [loadComments]);
 
-  if (error) {
-    return (
-      <p className="text-sm text-destructive text-center py-10">{error}</p>
-    );
-  }
+  const handleUnauthorized = useCallback(() => {
+    logout();
+    router.push("/auth/login");
+  }, [logout, router]);
 
-  if (comments.length === 0) {
-    return <EmptyState />;
-  }
+  const handleCreate = useCallback(
+    async (content: string) => {
+      setSubmitting(true);
+      try {
+        await createComment(readingId, { content });
+        await loadComments();
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 401) {
+          handleUnauthorized();
+        }
+        throw err;
+      } finally {
+        setSubmitting(false);
+      }
+    },
+    [readingId, loadComments, handleUnauthorized],
+  );
+
+  const handleReply = useCallback(
+    async (parentId: string, content: string) => {
+      try {
+        await replyToComment(readingId, parentId, { content });
+        await loadComments();
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 401) {
+          handleUnauthorized();
+        }
+        throw err;
+      }
+    },
+    [readingId, loadComments, handleUnauthorized],
+  );
 
   return (
-    <div className="flex flex-col gap-4">
-      {comments.map((comment) => (
-        <CommentCard key={comment.id} comment={comment} />
-      ))}
+    <div className="flex flex-col gap-6">
+      <section aria-label="Tulis komentar baru" className="flex flex-col gap-2">
+        {authLoading ? (
+          <Skeleton className="h-24 w-full" />
+        ) : isLoggedIn ? (
+          <CommentForm submitting={submitting} onSubmit={handleCreate} />
+        ) : (
+          <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+            Kamu harus{" "}
+            <Link className="text-primary underline" href="/auth/login">
+              login
+            </Link>{" "}
+            dulu untuk menulis komentar.
+          </div>
+        )}
+      </section>
+
+      <section aria-label="Daftar komentar" className="flex flex-col gap-4">
+        {loading ? (
+          <div className="flex flex-col gap-4">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <CommentSkeleton key={i} />
+            ))}
+          </div>
+        ) : error ? (
+          <p className="text-sm text-destructive text-center py-10">{error}</p>
+        ) : comments.length === 0 ? (
+          <EmptyState />
+        ) : (
+          comments.map((comment) => (
+            <CommentCard
+              key={comment.id}
+              comment={comment}
+              currentUserId={userId}
+              depth={0}
+              onReply={handleReply}
+            />
+          ))
+        )}
+      </section>
     </div>
   );
 }
-
