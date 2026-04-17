@@ -3,16 +3,18 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/app/providers/AuthProvider"
+import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { fetchUserAchievementProgress } from "@/features/achievements/api"
 import type { AchievementProgress } from "@/features/achievements/types"
 
 export default function AchievementsPage() {
   const router = useRouter()
-  const { userId, username, isLoading } = useAuth()
+  const { userId, username, isLoading, logout } = useAuth()
   const [achievements, setAchievements] = useState<AchievementProgress[]>([])
   const [isFetching, setIsFetching] = useState(true)
   const [error, setError] = useState("")
+  const [retryCount, setRetryCount] = useState(0)
 
   useEffect(() => {
     if (!isLoading && !username) {
@@ -38,8 +40,13 @@ export default function AchievementsPage() {
       .then((data) => {
         if (mounted) setAchievements(data)
       })
-      .catch(() => {
+      .catch((err: Error & { status?: number }) => {
         if (mounted) {
+          if (err.status === 401) {
+            logout()
+            return
+          }
+
           setError("Gagal memuat achievements. Coba refresh halaman.")
         }
       })
@@ -50,7 +57,7 @@ export default function AchievementsPage() {
     return () => {
       mounted = false
     }
-  }, [isLoading, userId])
+  }, [isLoading, userId, logout, retryCount])
 
   if (isLoading || !username) return null
 
@@ -64,7 +71,19 @@ export default function AchievementsPage() {
         <CardContent className="space-y-3">
           {isFetching && <p className="text-sm text-gray-500">Memuat achievements...</p>}
 
-          {!isFetching && error && <p className="text-sm text-red-500">{error}</p>}
+          {!isFetching && error && (
+            <div className="space-y-2">
+              <p className="text-sm text-red-500">{error}</p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setRetryCount((prev) => prev + 1)}
+              >
+                Coba lagi
+              </Button>
+            </div>
+          )}
 
           {!isFetching && !error && achievements.length === 0 && (
             <p className="text-sm text-gray-500">Belum ada achievement yang tersedia.</p>
@@ -74,6 +93,11 @@ export default function AchievementsPage() {
             <div className="space-y-3">
               {achievements.map((achievement) => {
                 const progress = `${achievement.currentProgress}/${achievement.milestone}`
+                const safeMilestone = achievement.milestone > 0 ? achievement.milestone : 1
+                const progressPercent = Math.min(
+                  100,
+                  Math.max(0, (achievement.currentProgress / safeMilestone) * 100)
+                )
 
                 return (
                   <div
@@ -96,6 +120,12 @@ export default function AchievementsPage() {
                     <p className="mt-2 text-sm text-gray-700">
                       Progress: <span className="font-medium">{progress}</span>
                     </p>
+                    <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-gray-200">
+                      <div
+                        className="h-full rounded-full bg-blue-500 transition-all"
+                        style={{ width: `${progressPercent}%` }}
+                      />
+                    </div>
                   </div>
                 )
               })}
