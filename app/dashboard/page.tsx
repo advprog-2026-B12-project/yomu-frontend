@@ -4,10 +4,11 @@ import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/app/providers/AuthProvider"
 import { Navbar } from "@/components/Navbar"
+import { Button } from "@/components/ui/button"
 
 export default function DashboardPage() {
   const router = useRouter()
-  const { username, isLoading } = useAuth()
+  const { username, isLoading, logout } = useAuth()
 
   useEffect(() => {
     if (!isLoading && !username) {
@@ -25,6 +26,19 @@ export default function DashboardPage() {
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
             Halo, <span className="text-blue-600">{username}</span>! 👋
           </h1>
+          <Button
+            className="w-full mb-3"
+            onClick={() => router.push("/achievements")}
+          >
+            Lihat Achievements
+          </Button>
+          <Button
+            variant="destructive"
+            className="w-full"
+            onClick={logout}
+          >
+            Keluar (Logout)
+          </Button>
         </div>
       </main>
     </div>
