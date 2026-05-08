@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { useAuth } from "@/app/providers/AuthProvider"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -12,7 +11,6 @@ const ALPHANUMERIC = /^[a-zA-Z0-9]*$/
 
 export default function CompleteRegistrationPage() {
   const router = useRouter()
-  const { login } = useAuth()
 
   const [email, setEmail] = useState("")
   const [displayName, setDisplayName] = useState("")
@@ -74,20 +72,9 @@ export default function CompleteRegistrationPage() {
 
       if (response.ok) {
         sessionStorage.removeItem("sso_pending")
-        const data = await response.json().catch(() => null)
-        if (data?.token && data?.user?.username) {
-          login(data.token, {
-            userId: String(data.user.userId ?? ""),
-            username: data.user.username,
-            displayName: data.user.displayName ?? data.user.username,
-            role: data.user.role ?? "PELAJAR",
-          })
-          router.push(data.user.role === "ADMIN" ? "/admin-dashboard" : "/dashboard")
-        } else {
-          setIsError(false)
-          setMessage("Akun berhasil dibuat! Mengarahkan ke halaman login...")
-          setTimeout(() => router.push("/auth/login"), 2000)
-        }
+        setIsError(false)
+        setMessage("Akun berhasil dibuat! Mengarahkan ke halaman login...")
+        setTimeout(() => router.push("/"), 2000)
       } else {
         const data = await response.json().catch(() => null)
         setIsError(true)

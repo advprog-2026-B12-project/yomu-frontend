@@ -92,35 +92,6 @@ export default function SettingsPage() {
     }
   }
 
-  const handleDeleteAccount = async () => {
-    if (!window.confirm("Yakin ingin menghapus akun? Tindakan ini tidak dapat dibatalkan.")) return
-
-    setLoading(true)
-    try {
-      const token = localStorage.getItem("token")
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL
-      const response = await fetch(`${apiUrl}/api/users/account`, {
-        method: "DELETE",
-        headers: { "Authorization": `Bearer ${token}` },
-      })
-
-      if (response.ok) {
-        logout()
-        router.push("/auth/login")
-      } else if (response.status === 401) {
-        logout()
-      } else {
-        setIsError(true)
-        setMessage("Gagal menghapus akun. Coba lagi.")
-      }
-    } catch {
-      setIsError(true)
-      setMessage("API nggak nyambung atau server mati.")
-    } finally {
-      setLoading(false)
-    }
-  }
-
   if (isLoading || !username) return null
 
   return (
@@ -189,18 +160,9 @@ export default function SettingsPage() {
             )}
           </CardContent>
 
-          <CardFooter className="flex flex-col gap-3">
+          <CardFooter>
             <Button type="submit" className="w-full" disabled={loading || !!usernameError}>
               {loading ? "Menyimpan..." : "Simpan Perubahan"}
-            </Button>
-            <Button
-              type="button"
-              variant="destructive"
-              className="w-full"
-              disabled={loading}
-              onClick={handleDeleteAccount}
-            >
-              Hapus Akun
             </Button>
           </CardFooter>
         </form>
