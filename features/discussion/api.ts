@@ -1,4 +1,10 @@
-import { Comment, CommentRequest } from "./types";
+import {
+  Comment,
+  CommentRequest,
+  PaginatedComments,
+  ReactionRequest,
+  SortOption,
+} from "./types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
@@ -43,8 +49,20 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-export function fetchComments(readingId: string): Promise<Comment[]> {
-  return request<Comment[]>(`/api/v1/readings/${readingId}/comments`);
+export function fetchComments(
+  readingId: string,
+  page = 0,
+  size = 20,
+  sort: SortOption = "newest",
+): Promise<Comment[]> {
+  const params = new URLSearchParams({
+    page: String(page),
+    size: String(size),
+    sort,
+  });
+  return request<Comment[]>(
+    `/api/v1/readings/${readingId}/comments?${params.toString()}`,
+  );
 }
 
 export function createComment(
@@ -90,6 +108,28 @@ export function deleteComment(
   commentId: string,
 ): Promise<void> {
   return request<void>(`/api/v1/readings/${readingId}/comments/${commentId}`, {
+    method: "DELETE",
+  });
+}
+
+export function adminDeleteComment(commentId: string): Promise<void> {
+  return request<void>(`/api/v1/admin/comments/${commentId}`, {
+    method: "DELETE",
+  });
+}
+
+export function setReaction(
+  commentId: string,
+  body: ReactionRequest,
+): Promise<void> {
+  return request<void>(`/api/v1/comments/${commentId}/reactions`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export function removeReaction(commentId: string): Promise<void> {
+  return request<void>(`/api/v1/comments/${commentId}/reactions`, {
     method: "DELETE",
   });
 }
