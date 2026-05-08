@@ -3,6 +3,7 @@
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/app/providers/AuthProvider"
+import { Navbar } from "@/components/Navbar"
 import { Button } from "@/components/ui/button"
 
 export default function DashboardPage() {
@@ -18,20 +19,28 @@ export default function DashboardPage() {
   if (isLoading || !username) return null
 
   return (
-    <div className="flex flex-col min-h-screen items-center justify-center bg-gray-50 p-4">
-      <div className="bg-white p-8 rounded-xl shadow-md text-center max-w-md w-full border border-gray-100">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">
-          Halo, <span className="text-blue-600">{username}</span>! 👋
-        </h1>
-
-        <Button className="w-full mb-3" onClick={() => router.push("/achievements")}>
-          Lihat Achievements
-        </Button>
-
-        <Button variant="destructive" className="w-full" onClick={logout}>
-          Keluar (Logout)
-        </Button>
-      </div>
+    <div className="flex flex-col min-h-screen bg-gray-50">
+      <Navbar />
+      <main className="flex flex-col items-center justify-center flex-1 p-4">
+        <div className="bg-white p-8 rounded-xl shadow-md text-center max-w-md w-full border border-gray-100">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            Halo, <span className="text-blue-600">{username}</span>! 👋
+          </h1>
+          <Button
+            className="w-full mb-3"
+            onClick={() => router.push("/achievements")}
+          >
+            Lihat Achievements
+          </Button>
+          <Button
+            variant="destructive"
+            className="w-full"
+            onClick={logout}
+          >
+            Keluar (Logout)
+          </Button>
+        </div>
+      </main>
     </div>
   )
 }
