@@ -42,9 +42,8 @@ export default function LoginPage() {
           userId: String(user.userId ?? ""),
           username: user.username,
           displayName: user.displayName ?? user.username,
-          role: user.role ?? "PELAJAR",
         })
-        router.push(user.role === "ADMIN" ? "/admin-dashboard" : "/dashboard")
+        router.push("/dashboard")
       } else {
         setMessage("Login Gagal. Cek lagi username/password.")
       }
@@ -82,13 +81,13 @@ export default function LoginPage() {
           userId: String(user.userId ?? ""),
           username: user.username,
           displayName: user.displayName ?? user.username,
-          role: user.role ?? "PELAJAR",
         })
-        router.push(user.role === "ADMIN" ? "/admin-dashboard" : "/dashboard")
+        router.push("/dashboard")
         return
       }
 
       if (data.needsRegistration) {
+        // New user — send to profile completion page
         sessionStorage.setItem(
           "sso_pending",
           JSON.stringify({ email: data.user.email, googleName: data.user.displayName ?? "" })
