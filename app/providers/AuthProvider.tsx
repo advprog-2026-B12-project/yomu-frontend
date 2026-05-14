@@ -8,12 +8,14 @@ export interface UserInfo {
   userId: string
   username: string
   displayName: string
+  role: string
 }
 
 interface AuthContextValue {
   userId: string
   username: string
   displayName: string
+  role: string
   isLoading: boolean
   login: (token: string, user: UserInfo) => void
   logout: () => void
@@ -21,7 +23,7 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null)
 
-const LS_KEYS = ["token", "userId", "username", "displayName"] as const
+const LS_KEYS = ["token", "userId", "username", "displayName", "role"] as const
 
 function clearStorage() {
   LS_KEYS.forEach((k) => localStorage.removeItem(k))
@@ -32,6 +34,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [userId, setUserId] = useState("")
   const [username, setUsername] = useState("")
   const [displayName, setDisplayName] = useState("")
+  const [role, setRole] = useState("")
   const [isLoading, setIsLoading] = useState(true)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -55,6 +58,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUserId("")
     setUsername("")
     setDisplayName("")
+    setRole("")
     router.push("/")
   }, [router])
 
@@ -64,9 +68,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem("userId", user.userId)
     localStorage.setItem("username", user.username)
     localStorage.setItem("displayName", user.displayName)
+    localStorage.setItem("role", user.role ?? "")
     setUserId(user.userId)
     setUsername(user.username)
     setDisplayName(user.displayName)
+    setRole(user.role ?? "")
     scheduleAutoLogout(token)
   }, [scheduleAutoLogout])
 
@@ -75,6 +81,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const storedUserId = localStorage.getItem("userId") ?? ""
     const storedUsername = localStorage.getItem("username") ?? ""
     const storedDisplayName = localStorage.getItem("displayName") ?? ""
+    const storedRole = localStorage.getItem("role") ?? ""
 
     if (!token || !storedUsername) {
       setIsLoading(false)
@@ -96,6 +103,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUserId(storedUserId)
       setUsername(storedUsername)
       setDisplayName(storedDisplayName)
+      setRole(storedRole)
       scheduleAutoLogout(token)
     } catch {
       clearStorage()
@@ -111,7 +119,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <GoogleOAuthProvider clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? ""}>
-      <AuthContext.Provider value={{ userId, username, displayName, isLoading, login, logout }}>
+      <AuthContext.Provider value={{ userId, username, displayName, role, isLoading, login, logout }}>
         {children}
       </AuthContext.Provider>
     </GoogleOAuthProvider>
