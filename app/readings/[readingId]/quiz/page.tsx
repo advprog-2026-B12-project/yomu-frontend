@@ -57,10 +57,25 @@ export default function QuizPage({
     const [answers, setAnswers] = useState<Record<string, string>>({})
     const [submitted, setSubmitted] = useState(false)
     const [score, setScore] = useState(0)
+    const [alreadyCompleted, setAlreadyCompleted] = useState(false)
 
     useEffect(() => {
         getQuiz(readingId).then(setReading)
-    }, [readingId])
+
+        if (!userId) return
+
+        fetch(
+            `${process.env.NEXT_PUBLIC_API_URL}/api/quiz/status/${userId}/${readingId}`
+        )
+            .then((res) => res.json())
+            .then((data) => {
+                setAlreadyCompleted(data.completed)
+            })
+            .catch((err) => {
+                console.error(err)
+            })
+
+    }, [readingId, userId])
 
     if (!reading) return <p>Loading...</p>
 
@@ -76,11 +91,10 @@ export default function QuizPage({
     async function handleSubmit() {
         if (!reading) return
 
+        const token = localStorage.getItem("token")
+
         const formattedAnswers = Object.entries(answers).map(
-            ([questionId, optionId]) => ({
-                questionId,
-                optionId,
-            })
+            ([questionId, optionId]) => ({ questionId, optionId })
         )
 
         const payload: QuizSubmitRequest = {
@@ -96,6 +110,7 @@ export default function QuizPage({
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
+                        "Authorization": `Bearer ${token}`,
                     },
                     body: JSON.stringify(payload),
                 }
@@ -103,8 +118,15 @@ export default function QuizPage({
 
             if (!res.ok) {
                 const text = await res.text()
+
                 console.error("BACKEND ERROR:", text)
-                throw new Error("Failed to submit quiz")
+
+                if (res.status === 409) {
+                    alert("You already completed this quiz.")
+                    return
+                }
+
+                throw new Error(text || "Failed to submit quiz")
             }
 
             const result = await res.json()
@@ -117,6 +139,23 @@ export default function QuizPage({
             console.error(err)
             alert("Submission failed")
         }
+    }
+
+    if (alreadyCompleted) {
+        return (
+            <div className="max-w-2xl mx-auto p-6 flex flex-col gap-6">
+                <h1 className="text-2xl font-bold">
+                    Quiz already completed
+                </h1>
+
+                <a
+                    href={`/readings/${readingId}`}
+                    className="bg-gray-200 px-4 py-2 rounded-lg text-center"
+                >
+                    Back to Reading
+                </a>
+            </div>
+        )
     }
 
     if (!started) {
