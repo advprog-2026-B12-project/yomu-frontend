@@ -18,6 +18,9 @@ export function Navbar() {
             Admin Dashboard
           </Link>
         )}
+        <Link href="/achievements" className="text-sm font-medium text-gray-700 hover:text-blue-600">
+          Achievements
+        </Link>
         <Link href="/settings" className="text-sm font-medium text-gray-700 hover:text-blue-600">
           Pengaturan
         </Link>

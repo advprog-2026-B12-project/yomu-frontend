@@ -1,4 +1,4 @@
-import { AchievementProgress, EventTriggerResponse } from "./types";
+import { AchievementProgress, EventTriggerResponse, DailyMission, UserDailyMission } from "./types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
@@ -23,6 +23,44 @@ export async function fetchUserAchievementProgress(
     const error: ApiError = new Error(
       `Failed to fetch achievements: ${response.status}`,
     );
+    error.status = response.status;
+    throw error;
+  }
+
+  return response.json();
+}
+
+export async function fetchActiveDailyMissions(): Promise<DailyMission[]> {
+  const token = localStorage.getItem("token");
+  const response = await fetch(`${API_BASE_URL}/api/daily-missions/active`, {
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    const error: ApiError = new Error(`Failed to fetch daily missions: ${response.status}`);
+    error.status = response.status;
+    throw error;
+  }
+
+  return response.json();
+}
+
+export async function fetchUserDailyMissions(userId: string): Promise<UserDailyMission[]> {
+  const token = localStorage.getItem("token");
+  const response = await fetch(`${API_BASE_URL}/api/daily-missions/user/${userId}`, {
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    const error: ApiError = new Error(`Failed to fetch user daily missions: ${response.status}`);
     error.status = response.status;
     throw error;
   }
