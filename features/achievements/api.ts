@@ -1,94 +1,81 @@
-import { AchievementProgress, EventTriggerResponse, DailyMission, UserDailyMission } from "./types";
+import {
+  AchievementProgress,
+  AchievementRequest,
+  AchievementResponse,
+  DailyMissionRequest,
+  DailyMissionResponse,
+  EventTriggerResponse,
+  UserAchievementResponse,
+  UserDailyMission,
+} from "./types"
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080"
 
-type ApiError = Error & { status?: number };
+type ApiError = Error & { status?: number }
 
-export async function fetchUserAchievementProgress(
-  userId: string,
-): Promise<AchievementProgress[]> {
-  const token = localStorage.getItem("token");
-  const response = await fetch(
-    `${API_BASE_URL}/api/achievements/user/${userId}/progress`,
-    {
-      headers: {
-        "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      cache: "no-store",
-    },
-  );
-
-  if (!response.ok) {
-    const error: ApiError = new Error(
-      `Failed to fetch achievements: ${response.status}`,
-    );
-    error.status = response.status;
-    throw error;
+function authHeaders(): Record<string, string> {
+  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null
+  return {
+    "Content-Type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
   }
-
-  return response.json();
 }
 
-export async function fetchActiveDailyMissions(): Promise<DailyMission[]> {
-  const token = localStorage.getItem("token");
-  const response = await fetch(`${API_BASE_URL}/api/daily-missions/active`, {
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
+async function req<T>(path: string, method = "GET", body?: unknown): Promise<T> {
+  const res = await fetch(`${API_BASE}${path}`, {
+    method,
+    headers: authHeaders(),
     cache: "no-store",
-  });
-
-  if (!response.ok) {
-    const error: ApiError = new Error(`Failed to fetch daily missions: ${response.status}`);
-    error.status = response.status;
-    throw error;
+    ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+  })
+  if (!res.ok) {
+    const error: ApiError = new Error(`Failed: ${res.status}`)
+    error.status = res.status
+    throw error
   }
-
-  return response.json();
+  if (res.status === 204) return undefined as T
+  return res.json()
 }
 
-export async function fetchUserDailyMissions(userId: string): Promise<UserDailyMission[]> {
-  const token = localStorage.getItem("token");
-  const response = await fetch(`${API_BASE_URL}/api/daily-missions/user/${userId}`, {
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    cache: "no-store",
-  });
+// ── User: Achievement Progress ──────────────────────────────────────────────
 
-  if (!response.ok) {
-    const error: ApiError = new Error(`Failed to fetch user daily missions: ${response.status}`);
-    error.status = response.status;
-    throw error;
-  }
+export const fetchUserAchievementProgress = (userId: string): Promise<AchievementProgress[]> =>
+  req(`/api/achievements/user/${userId}/progress`)
 
-  return response.json();
-}
+export const fetchUserAchievements = (userId: string): Promise<UserAchievementResponse[]> =>
+  req(`/api/achievements/user/${userId}`)
 
-export async function triggerAchievementEvent(
-  userId: string,
-  eventType: string,
-): Promise<EventTriggerResponse> {
-  const token = localStorage.getItem("token");
-  const response = await fetch(`${API_BASE_URL}/api/achievements/trigger`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    body: JSON.stringify({ userId, eventType }),
-  });
+export const toggleDisplayAchievement = (userAchievementId: string): Promise<UserAchievementResponse> =>
+  req(`/api/achievements/display/${userAchievementId}`, "PUT")
 
-  if (!response.ok) {
-    const error: ApiError = new Error(
-      `Failed to trigger event: ${response.status}`,
-    );
-    error.status = response.status;
-    throw error;
-  }
+// ── User: Daily Missions ────────────────────────────────────────────────────
 
-  return response.json();
-}
+export const fetchActiveDailyMissions = (): Promise<import("./types").DailyMission[]> =>
+  req("/api/daily-missions/active")
+
+export const fetchUserDailyMissions = (userId: string): Promise<UserDailyMission[]> =>
+  req(`/api/daily-missions/user/${userId}`)
+
+// ── Admin: Trigger Event ────────────────────────────────────────────────────
+
+export const triggerAchievementEvent = (userId: string, eventType: string): Promise<EventTriggerResponse> =>
+  req("/api/achievements/trigger", "POST", { userId, eventType })
+
+// ── Admin: Achievements ─────────────────────────────────────────────────────
+
+export const fetchAllAchievements = (): Promise<AchievementResponse[]> =>
+  req("/api/achievements")
+
+export const createAchievement = (body: AchievementRequest): Promise<AchievementResponse> =>
+  req("/api/achievements", "POST", body)
+
+// ── Admin: Daily Missions ───────────────────────────────────────────────────
+
+export const createDailyMission = (body: DailyMissionRequest): Promise<DailyMissionResponse> =>
+  req("/api/daily-missions", "POST", body)
+
+export const updateDailyMission = (id: string, body: DailyMissionRequest): Promise<DailyMissionResponse> =>
+  req(`/api/daily-missions/${id}`, "PUT", body)
+
+export const deleteDailyMission = (id: string): Promise<void> =>
+  req(`/api/daily-missions/${id}`, "DELETE")
