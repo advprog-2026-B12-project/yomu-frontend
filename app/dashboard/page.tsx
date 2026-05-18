@@ -23,15 +23,9 @@ export default function DashboardPage() {
       <Navbar />
       <main className="flex flex-col items-center justify-center flex-1 p-4">
         <div className="bg-white p-8 rounded-xl shadow-md text-center max-w-md w-full border border-gray-100">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          <h1 className="text-3xl font-bold text-gray-900 mb-6">
             Halo, <span className="text-blue-600">{username}</span>! 👋
           </h1>
-          <Button
-            className="w-full mb-3"
-            onClick={() => router.push("/achievements")}
-          >
-            Lihat Achievements
-          </Button>
           <Button
             variant="destructive"
             className="w-full"
