@@ -43,24 +43,29 @@ export default function ReadingsPage() {
 
   useEffect(() => {
     if (isLoading || !userId) return
-
-    const token = localStorage.getItem("token")
-    setFetching(true)
-
-    fetch(`${API}/api/quiz/all`, {
-      headers: {
-        "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      cache: "no-store",
-    })
-      .then((res) => {
+    let mounted = true
+    const load = async () => {
+      const token = localStorage.getItem("token")
+      if (mounted) setFetching(true)
+      try {
+        const res = await fetch(`${API}/api/quiz/all`, {
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          cache: "no-store",
+        })
         if (!res.ok) throw new Error(`${res.status}`)
-        return res.json()
-      })
-      .then(setReadings)
-      .catch(() => setError("Gagal memuat daftar bacaan. Coba refresh halaman."))
-      .finally(() => setFetching(false))
+        const data = await res.json()
+        if (mounted) setReadings(data)
+      } catch {
+        if (mounted) setError("Gagal memuat daftar bacaan. Coba refresh halaman.")
+      } finally {
+        if (mounted) setFetching(false)
+      }
+    }
+    load()
+    return () => { mounted = false }
   }, [isLoading, userId])
 
   if (isLoading || !username) return null

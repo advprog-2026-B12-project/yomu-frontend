@@ -53,11 +53,20 @@ export default function ClansPage() {
 
   useEffect(() => {
     if (isLoading) return
-    setFetching(true)
-    getClans()
-      .then(setClans)
-      .catch(() => setError("Gagal memuat daftar clan. Coba refresh halaman."))
-      .finally(() => setFetching(false))
+    let mounted = true
+    const load = async () => {
+      if (mounted) setFetching(true)
+      try {
+        const data = await getClans()
+        if (mounted) setClans(data)
+      } catch {
+        if (mounted) setError("Gagal memuat daftar clan. Coba refresh halaman.")
+      } finally {
+        if (mounted) setFetching(false)
+      }
+    }
+    load()
+    return () => { mounted = false }
   }, [isLoading])
 
   if (isLoading || !username) return null
