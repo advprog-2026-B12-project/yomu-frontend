@@ -15,6 +15,7 @@ export default function AchievementsPage() {
   const [isFetching, setIsFetching] = useState(true)
   const [error, setError] = useState("")
   const [retryCount, setRetryCount] = useState(0)
+  const invalidSession = !isLoading && !!username && !userId
 
   useEffect(() => {
     if (!isLoading && !username) {
@@ -27,18 +28,20 @@ export default function AchievementsPage() {
     if (isLoading) return
 
     if (!userId) {
-      setIsFetching(false)
-      setError("Sesi pengguna tidak valid. Silakan login ulang.")
       return
     }
 
     let mounted = true
-    setIsFetching(true)
-    setError("")
 
-    fetchUserAchievementProgress(userId)
+    Promise.resolve()
+      .then(() => {
+        if (!mounted) return null
+        setIsFetching(true)
+        setError("")
+        return fetchUserAchievementProgress(userId)
+      })
       .then((data) => {
-        if (mounted) setAchievements(data)
+        if (mounted && data) setAchievements(data)
       })
       .catch((err: Error & { status?: number }) => {
         if (mounted) {
@@ -69,9 +72,17 @@ export default function AchievementsPage() {
           <CardDescription>Lihat progres pencapaian kamu berdasarkan data dari server.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          {isFetching && <p className="text-sm text-gray-500">Memuat achievements...</p>}
+          {invalidSession && (
+            <p className="text-sm text-red-500">
+              Sesi pengguna tidak valid. Silakan login ulang.
+            </p>
+          )}
 
-          {!isFetching && error && (
+          {!invalidSession && isFetching && (
+            <p className="text-sm text-gray-500">Memuat achievements...</p>
+          )}
+
+          {!invalidSession && !isFetching && error && (
             <div className="space-y-2">
               <p className="text-sm text-red-500">{error}</p>
               <Button
@@ -85,11 +96,11 @@ export default function AchievementsPage() {
             </div>
           )}
 
-          {!isFetching && !error && achievements.length === 0 && (
+          {!invalidSession && !isFetching && !error && achievements.length === 0 && (
             <p className="text-sm text-gray-500">Belum ada achievement yang tersedia.</p>
           )}
 
-          {!isFetching && !error && achievements.length > 0 && (
+          {!invalidSession && !isFetching && !error && achievements.length > 0 && (
             <div className="space-y-3">
               {achievements.map((achievement) => {
                 const progress = `${achievement.currentProgress}/${achievement.milestone}`

@@ -17,12 +17,12 @@ export default function ClansPage() {
     const userId = 2;
 
     async function load() {
-        setError(null);
         const res = await fetch("/api/clans", { cache: "no-store" });
         if (!res.ok) {
             setError(`Failed to load clans: ${res.status}`);
             return;
         }
+        setError(null);
         setClans(await res.json());
     }
 
@@ -45,7 +45,27 @@ export default function ClansPage() {
     }
 
     useEffect(() => {
-        load();
+        let mounted = true;
+
+        fetch("/api/clans", { cache: "no-store" })
+            .then(async (res) => {
+                if (!mounted) return;
+
+                if (!res.ok) {
+                    setError(`Failed to load clans: ${res.status}`);
+                    return;
+                }
+
+                const data = await res.json();
+                if (!mounted) return;
+
+                setError(null);
+                setClans(data);
+            });
+
+        return () => {
+            mounted = false;
+        };
     }, []);
 
     return (
