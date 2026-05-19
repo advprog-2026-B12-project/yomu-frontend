@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { PlusIcon, Trash2Icon, CheckCircle2Icon, CircleIcon } from "lucide-react";
+import { PlusIcon, Trash2Icon, CheckCircle2Icon, CircleIcon, PencilIcon, CheckIcon, XIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,6 +10,7 @@ import {
     adminGetOptions,
     adminCreateOption,
     adminDeleteOption,
+    adminUpdateOption,
 } from "../../api";
 import { Option } from "../../types";
 
@@ -24,6 +25,9 @@ export function OptionManager({ questionId }: OptionManagerProps) {
     const [isCorrect, setIsCorrect] = useState(false);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [editingId, setEditingId] = useState<string | null>(null);
+    const [editText, setEditText] = useState("");
+    const [editCorrect, setEditCorrect] = useState(false);
 
     const load = () => {
         setLoading(true);
@@ -49,6 +53,21 @@ export function OptionManager({ questionId }: OptionManagerProps) {
             setIsCorrect(false);
         } catch (e: unknown) {
             setError(e instanceof Error ? e.message : "Gagal menambah opsi");
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleEditSave = async (id: string) => {
+        if (!editText.trim()) return;
+        setSaving(true);
+        setError(null);
+        try {
+            const updated = await adminUpdateOption(id, { optionText: editText.trim(), isCorrect: editCorrect });
+            setOptions((prev) => prev.map((o) => (o.id === updated.id ? updated : o)));
+            setEditingId(null);
+        } catch (e: unknown) {
+            setError(e instanceof Error ? e.message : "Gagal mengupdate opsi");
         } finally {
             setSaving(false);
         }
@@ -85,24 +104,63 @@ export function OptionManager({ questionId }: OptionManagerProps) {
                 {options.map((opt) => (
                     <div
                         key={opt.id}
-                        className="flex items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm"
+                        className="flex items-center gap-2 rounded-md border px-3 py-2 text-sm"
                     >
-            <span className="flex items-center gap-2">
-              {opt.isCorrect ? (
-                  <CheckCircle2Icon className="size-4 text-green-500 shrink-0" />
-              ) : (
-                  <CircleIcon className="size-4 text-muted-foreground shrink-0" />
-              )}
-                {opt.optionText}
-            </span>
-                        <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            onClick={() => handleDelete(opt.id)}
-                            className="text-destructive hover:text-destructive"
-                        >
-                            <Trash2Icon />
-                        </Button>
+                        {editingId === opt.id ? (
+                            <>
+                                <Input
+                                    value={editText}
+                                    onChange={(e) => setEditText(e.target.value)}
+                                    className="flex-1 text-sm h-7"
+                                    autoFocus
+                                    onKeyDown={(e) => {
+                                        if (e.key === "Enter") handleEditSave(opt.id);
+                                        if (e.key === "Escape") setEditingId(null);
+                                    }}
+                                />
+                                <label className="flex items-center gap-1 text-xs text-muted-foreground cursor-pointer select-none shrink-0">
+                                    <input
+                                        type="checkbox"
+                                        checked={editCorrect}
+                                        onChange={(e) => setEditCorrect(e.target.checked)}
+                                        className="rounded"
+                                    />
+                                    Benar
+                                </label>
+                                <Button variant="ghost" size="icon-sm" onClick={() => handleEditSave(opt.id)} disabled={saving}>
+                                    <CheckIcon className="size-4 text-green-600" />
+                                </Button>
+                                <Button variant="ghost" size="icon-sm" onClick={() => setEditingId(null)}>
+                                    <XIcon className="size-4" />
+                                </Button>
+                            </>
+                        ) : (
+                            <>
+                                <span className="flex items-center gap-2 flex-1">
+                                    {opt.isCorrect ? (
+                                        <CheckCircle2Icon className="size-4 text-green-500 shrink-0" />
+                                    ) : (
+                                        <CircleIcon className="size-4 text-muted-foreground shrink-0" />
+                                    )}
+                                    {opt.optionText}
+                                </span>
+                                <Button
+                                    variant="ghost"
+                                    size="icon-sm"
+                                    onClick={() => { setEditingId(opt.id); setEditText(opt.optionText); setEditCorrect(opt.isCorrect); }}
+                                >
+                                    <PencilIcon className="size-3.5" />
+                                </Button>
+                                <Button
+                                    variant="ghost"
+                                    size="icon-sm"
+                                    onClick={() => handleDelete(opt.id)}
+                                    className="text-destructive hover:text-destructive"
+                                >
+                                    <Trash2Icon />
+                                </Button>
+                            </>
+                        )}
                     </div>
                 ))}
             </div>

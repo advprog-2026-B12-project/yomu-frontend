@@ -13,9 +13,21 @@ export function Navbar() {
         <Link href="/dashboard" className="text-sm font-medium text-gray-700 hover:text-blue-600">
           Dashboard
         </Link>
+        <Link href="/readings" className="text-sm font-medium text-gray-700 hover:text-blue-600">
+          Readings
+        </Link>
+        <Link href="/clans" className="text-sm font-medium text-gray-700 hover:text-blue-600">
+          Clans
+        </Link>
+        <Link href="/clans/leaderboard" className="text-sm font-medium text-gray-700 hover:text-blue-600">
+          Liga
+        </Link>
+        <Link href="/achievements" className="text-sm font-medium text-gray-700 hover:text-blue-600">
+          Achievements
+        </Link>
         {role === "ADMIN" && (
           <Link href="/admin-dashboard" className="text-sm font-medium text-blue-600 hover:underline">
-            Admin Dashboard
+            Admin
           </Link>
         )}
         <Link href="/settings" className="text-sm font-medium text-gray-700 hover:text-blue-600">

@@ -66,3 +66,23 @@ export const adminCreateOption = (
 
 export const adminDeleteOption = (optionId: string): Promise<void> =>
     request(`/api/admin/options/${optionId}`, { method: "DELETE" });
+
+// ── Admin: Update ───────────────────────────────────────────────────────────
+
+export const adminUpdateReading = (id: string, body: ReadingRequest): Promise<Reading> =>
+    request(`/api/admin/readings/${id}`, {
+        method: "PUT",
+        body: JSON.stringify(body),
+    });
+
+export const adminUpdateQuestion = (questionId: string, body: QuestionRequest): Promise<Question> =>
+    request(`/api/admin/questions/${questionId}`, {
+        method: "PUT",
+        body: JSON.stringify(body),
+    });
+
+export const adminUpdateOption = (optionId: string, body: OptionRequest): Promise<Option> =>
+    request(`/api/admin/options/${optionId}`, {
+        method: "PUT",
+        body: JSON.stringify(body),
+    });
