@@ -14,6 +14,12 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    env:
+      E2E_BASE_URL: http://localhost:3000
+      E2E_TEST_EMAIL: ${{ vars.E2E_TEST_EMAIL }}
+      E2E_TEST_PASSWORD: ${{ secrets.E2E_TEST_PASSWORD }}
+      NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL }}
+      NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${{ vars.NEXT_PUBLIC_GOOGLE_CLIENT_ID }}
 
     steps:
       - name: Checkout repository
@@ -25,10 +31,37 @@ jobs:
           node-version: 24
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
 
       - name: Build Next.js
         run: npm run build
+
+      - name: Install Playwright browsers
+        if: env.NEXT_PUBLIC_API_URL != ''
+        run: npx playwright install --with-deps
+
+      - name: Run Auth E2E tests
+        if: env.NEXT_PUBLIC_API_URL != ''
+        run: npm run e2e
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-playwright-report
+          path: playwright-report
+          if-no-files-found: warn
+
+      - name: Upload Playwright test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-playwright-test-results
+          path: test-results
+          if-no-files-found: warn
 
       - name: Deploy to Vercel (only on push)
         if: github.event_name == 'push'

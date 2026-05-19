@@ -47,3 +47,6 @@ next-env.d.ts
 
 *.pdf
 docs/
+/test-results
+/playwright-report
+debug.log

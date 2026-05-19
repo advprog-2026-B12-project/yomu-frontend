@@ -15,14 +15,18 @@ export function AchievementPopup({
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
-    if (achievement || dailyMission) {
-      setIsVisible(true);
-      const timer = setTimeout(() => {
-        setIsVisible(false);
-        setTimeout(onClose, 300); // Wait for slide-out animation to finish
-      }, 4000);
-      return () => clearTimeout(timer);
-    }
+    if (!(achievement || dailyMission)) return;
+    let mounted = true;
+    const show = async () => { if (mounted) setIsVisible(true); };
+    show();
+    const timer = setTimeout(() => {
+      if (mounted) setIsVisible(false);
+      setTimeout(onClose, 300); // Wait for slide-out animation to finish
+    }, 4000);
+    return () => {
+      mounted = false;
+      clearTimeout(timer);
+    };
   }, [achievement, dailyMission, onClose]);
 
   if (!achievement && !dailyMission) return null;
