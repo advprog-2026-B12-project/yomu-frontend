@@ -77,8 +77,13 @@ export default function LeaderboardPage() {
         const data = await getLeaderboardByDivision(tab)
         setEntries(data)
       }
-    } catch {
-      setError("Gagal memuat leaderboard. Coba refresh halaman.")
+    } catch (err) {
+      const status = (err as { status?: number }).status
+      if (tab === "MY" && (status === 400 || status === 404)) {
+        setError("Kamu belum bergabung dengan clan manapun.")
+      } else {
+        setError("Gagal memuat leaderboard. Coba refresh halaman.")
+      }
       setEntries([])
     } finally {
       setFetching(false)

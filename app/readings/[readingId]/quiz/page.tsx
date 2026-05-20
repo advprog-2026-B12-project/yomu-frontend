@@ -32,7 +32,14 @@ type Reading = {
 }
 
 async function getQuiz(readingId: string): Promise<Reading> {
-  const res = await fetch(`${API}/api/quiz/${readingId}`, { cache: "no-store" })
+  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null
+  const res = await fetch(`${API}/api/quiz/${readingId}`, {
+    cache: "no-store",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  })
   if (!res.ok) throw new Error("Failed to fetch quiz")
   return res.json()
 }
