@@ -32,20 +32,22 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     },
   });
 
-  if (res.status === 204) return undefined as T;
-
   if (!res.ok) {
     let message = `Request gagal (${res.status})`;
+
     try {
       const body = await res.json();
-      if (body && typeof body.error === "string") message = body.error;
-    } catch {
-      // ignore parse failure, fall back to default message
-    }
+      if (body && typeof body.error === "string") {
+        message = body.error;
+      }
+    } catch {}
+
     throw new ApiError(res.status, message);
   }
 
-  return res.json() as Promise<T>;
+  const text = await res.text();
+
+  return (text ? JSON.parse(text) : undefined) as T;
 }
 
 export function fetchComments(
