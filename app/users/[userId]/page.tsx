@@ -62,21 +62,26 @@ export default function PublicProfilePage() {
     if (!userId) return
 
     let mounted = true
-    setIsFetching(true)
-    setError("")
 
-    Promise.all([fetchUserProfile(userId), fetchPublicAchievements(userId)])
-      .then(([profileData, achievementData]) => {
+    async function load() {
+      setIsFetching(true)
+      setError("")
+      try {
+        const [profileData, achievementData] = await Promise.all([
+          fetchUserProfile(userId),
+          fetchPublicAchievements(userId),
+        ])
         if (!mounted) return
         setProfile(profileData)
         setAchievements(achievementData.filter((a) => a.isUnlocked))
-      })
-      .catch(() => {
+      } catch {
         if (mounted) setError("Pengguna tidak ditemukan atau terjadi kesalahan.")
-      })
-      .finally(() => {
+      } finally {
         if (mounted) setIsFetching(false)
-      })
+      }
+    }
+
+    load()
 
     return () => { mounted = false }
   }, [userId])

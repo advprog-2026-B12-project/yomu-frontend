@@ -6,7 +6,7 @@ import { Trophy, CalendarCheck, Eye, EyeOff, Lock, Unlock } from "lucide-react";
 import { useAuth } from "@/app/providers/AuthProvider";
 import { Navbar } from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
