@@ -72,7 +72,18 @@ export const fetchAllAchievements = (): Promise<AchievementResponse[]> =>
 export const createAchievement = (body: AchievementRequest): Promise<AchievementResponse> =>
   req("/api/achievements", "POST", body)
 
+// ── Admin: Achievements ─────────────────────────────────────────────────────
+
+export const updateAchievement = (id: string, body: AchievementRequest): Promise<AchievementResponse> =>
+  req(`/api/achievements/${id}`, "PUT", body)
+
+export const deleteAchievement = (id: string): Promise<void> =>
+  req(`/api/achievements/${id}`, "DELETE")
+
 // ── Admin: Daily Missions ───────────────────────────────────────────────────
+
+export const fetchAllDailyMissionsAdmin = (): Promise<DailyMissionResponse[]> =>
+  req("/api/daily-missions")
 
 export const createDailyMission = (body: DailyMissionRequest): Promise<DailyMissionResponse> =>
   req("/api/daily-missions", "POST", body)

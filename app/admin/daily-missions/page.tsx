@@ -20,7 +20,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  fetchActiveDailyMissions,
+  fetchAllDailyMissionsAdmin,
   createDailyMission,
   updateDailyMission,
   deleteDailyMission,
@@ -76,7 +76,7 @@ export default function AdminDailyMissionsPage() {
   }, [isLoading, username, role, router]);
 
   useEffect(() => {
-    fetchActiveDailyMissions()
+    fetchAllDailyMissionsAdmin()
       .then(setMissions)
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
