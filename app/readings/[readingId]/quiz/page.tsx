@@ -15,7 +15,6 @@ const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080"
 type Option = {
   id: string
   optionText: string
-  correct: boolean
 }
 
 type Question = {
@@ -27,12 +26,18 @@ type Question = {
 type Reading = {
   id: string
   title: string
-  content: string
   questions: Question[]
 }
 
 async function getQuiz(readingId: string): Promise<Reading> {
-  const res = await fetch(`${API}/api/quiz/${readingId}`, { cache: "no-store" })
+  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null
+  const res = await fetch(`${API}/api/quiz/${readingId}`, {
+    cache: "no-store",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  })
   if (!res.ok) throw new Error("Failed to fetch quiz")
   return res.json()
 }
@@ -254,13 +259,7 @@ export default function QuizPage({
       <Navbar />
       <main className="max-w-2xl mx-auto w-full px-4 py-8 flex flex-col gap-6">
         <div>
-          <Button variant="ghost" size="sm" asChild className="-ml-2">
-            <Link href={`/readings/${readingId}`}>
-              <ArrowLeft className="size-4 mr-1.5" />
-              Kembali
-            </Link>
-          </Button>
-          <h1 className="text-xl font-bold mt-3">Quiz: {reading.title}</h1>
+          <h1 className="text-xl font-bold">Quiz: {reading.title}</h1>
           <p className="text-sm text-muted-foreground mt-1">
             {Object.keys(answers).length} / {reading.questions.length} pertanyaan dijawab
           </p>

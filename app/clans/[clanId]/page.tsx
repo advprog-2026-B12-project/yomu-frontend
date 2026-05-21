@@ -36,6 +36,23 @@ import {
 } from "@/features/clans/api"
 import type { Clan, ClanMember, ClanJoinRequest } from "@/features/clans/types"
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080"
+
+async function fetchDisplayName(userId: string): Promise<string> {
+  try {
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null
+    const res = await fetch(`${API_BASE}/api/users/${userId}`, {
+      headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      cache: "no-store",
+    })
+    if (!res.ok) return userId.slice(0, 8)
+    const data = await res.json()
+    return data.displayName ?? data.username ?? userId.slice(0, 8)
+  } catch {
+    return userId.slice(0, 8)
+  }
+}
+
 const DIVISION_COLORS: Record<string, string> = {
   BRONZE: "bg-amber-100 text-amber-800",
   SILVER: "bg-gray-100 text-gray-700",
@@ -43,9 +60,6 @@ const DIVISION_COLORS: Record<string, string> = {
   DIAMOND: "bg-blue-100 text-blue-700",
 }
 
-function shortId(id: string) {
-  return id.slice(0, 8)
-}
 
 export default function ClanDetailPage({
   params,
@@ -60,6 +74,7 @@ export default function ClanDetailPage({
 
   const [clan, setClan] = useState<Clan | null>(null)
   const [members, setMembers] = useState<ClanMember[]>([])
+  const [memberNames, setMemberNames] = useState<Record<string, string>>({})
   const [joinRequests, setJoinRequests] = useState<ClanJoinRequest[]>([])
   const [fetching, setFetching] = useState(true)
   const [error, setError] = useState("")
@@ -85,9 +100,24 @@ export default function ClanDetailPage({
       setClan(clanData)
       setMembers(memberData)
 
+      const nameEntries = await Promise.all(
+        memberData.map(async (m) => [m.userId, await fetchDisplayName(m.userId)] as const)
+      )
+      setMemberNames(Object.fromEntries(nameEntries))
+
       if (memberData.find((m) => m.role === "LEADER" && m.userId === userId)) {
         const requests = await getPendingJoinRequests(numericClanId).catch(() => [])
-        setJoinRequests(requests.filter((r) => r.status === "PENDING"))
+        const pending = requests.filter((r) => r.status === "PENDING")
+        setJoinRequests(pending)
+
+        const extraEntries = await Promise.all(
+          pending
+            .filter((r) => !nameEntries.some(([id]) => id === r.userId))
+            .map(async (r) => [r.userId, await fetchDisplayName(r.userId)] as const)
+        )
+        if (extraEntries.length > 0) {
+          setMemberNames((prev) => ({ ...prev, ...Object.fromEntries(extraEntries) }))
+        }
       }
     } catch {
       setError("Gagal memuat data clan. Coba refresh halaman.")
@@ -296,10 +326,10 @@ export default function ClanDetailPage({
                       <div className="flex items-center gap-3">
                         <Avatar className="size-8">
                           <AvatarFallback className="text-xs">
-                            {shortId(req.userId).slice(0, 2).toUpperCase()}
+                            {(memberNames[req.userId] ?? req.userId).slice(0, 2).toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
-                        <span className="text-sm font-mono">{shortId(req.userId)}</span>
+                        <span className="text-sm">{memberNames[req.userId] ?? req.userId.slice(0, 8)}</span>
                       </div>
                       <div className="flex gap-2">
                         <Button
@@ -347,12 +377,12 @@ export default function ClanDetailPage({
                       <div className="flex items-center gap-3">
                         <Avatar className="size-8">
                           <AvatarFallback className="text-xs">
-                            {shortId(member.userId).slice(0, 2).toUpperCase()}
+                            {(memberNames[member.userId] ?? member.userId).slice(0, 2).toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
                         <div>
-                          <p className="text-sm font-mono">
-                            {shortId(member.userId)}
+                          <p className="text-sm font-medium">
+                            {memberNames[member.userId] ?? member.userId.slice(0, 8)}
                             {member.userId === userId && (
                               <span className="ml-1 text-xs text-muted-foreground">(Kamu)</span>
                             )}

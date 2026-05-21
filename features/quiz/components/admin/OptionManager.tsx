@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { PlusIcon, Trash2Icon, CheckCircle2Icon, CircleIcon, PencilIcon, CheckIcon, XIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
     adminGetOptions,
@@ -29,15 +28,13 @@ export function OptionManager({ questionId }: OptionManagerProps) {
     const [editText, setEditText] = useState("");
     const [editCorrect, setEditCorrect] = useState(false);
 
-    const load = () => {
+    useEffect(() => {
         setLoading(true);
         adminGetOptions(questionId)
             .then(setOptions)
             .catch((e: Error) => setError(e.message))
             .finally(() => setLoading(false));
-    };
-
-    useEffect(() => { load(); }, [questionId]);
+    }, [questionId]);
 
     const handleAdd = async () => {
         if (!optionText.trim()) return;

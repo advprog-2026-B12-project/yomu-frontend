@@ -1,24 +1,58 @@
+"use client"
+
+import { useEffect, useState, use } from "react"
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
+import { Skeleton } from "@/components/ui/skeleton"
 import { QuestionManager } from "@/features/quiz/components/admin/QuestionManager"
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080"
 
 type Reading = { id: string; title: string; content: string }
 
-async function getReading(id: string): Promise<Reading> {
-  const res = await fetch(`${API}/api/admin/readings/${id}`, { cache: "no-store" })
-  if (!res.ok) throw new Error("Failed to fetch reading")
-  return res.json()
-}
-
-export default async function AdminReadingDetailPage({
+export default function AdminReadingDetailPage({
   params,
 }: {
   params: Promise<{ readingId: string }>
 }) {
-  const { readingId } = await params
-  const reading = await getReading(readingId)
+  const { readingId } = use(params)
+  const [reading, setReading] = useState<Reading | null>(null)
+  const [error, setError] = useState("")
+
+  useEffect(() => {
+    const token = localStorage.getItem("token")
+    fetch(`${API}/api/admin/readings/${readingId}`, {
+      cache: "no-store",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error(`${res.status}`)
+        return res.json()
+      })
+      .then(setReading)
+      .catch(() => setError("Gagal memuat bacaan."))
+  }, [readingId])
+
+  if (error) {
+    return (
+      <main className="max-w-3xl mx-auto px-4 py-8">
+        <p className="text-sm text-destructive">{error}</p>
+      </main>
+    )
+  }
+
+  if (!reading) {
+    return (
+      <main className="max-w-3xl mx-auto px-4 py-8 flex flex-col gap-4">
+        <Skeleton className="h-8 w-64" />
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-3/4" />
+      </main>
+    )
+  }
 
   return (
     <main className="max-w-3xl mx-auto px-4 py-8 flex flex-col gap-6">
