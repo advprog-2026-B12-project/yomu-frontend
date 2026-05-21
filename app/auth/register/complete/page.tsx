@@ -64,7 +64,6 @@ export default function CompleteRegistrationPage() {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL
 
       const payload = { displayName, username, email, password }
-      console.log("[SSO Complete Registration] Payload:", payload)
 
       const response = await fetch(`${apiUrl}/api/auth/register`, {
         method: "POST",

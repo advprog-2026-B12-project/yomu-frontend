@@ -1,7 +1,6 @@
 import {
   Comment,
   CommentRequest,
-  PaginatedComments,
   ReactionRequest,
   SortOption,
 } from "./types";
