@@ -45,6 +45,9 @@ export const fetchUserAchievementProgress = (userId: string): Promise<Achievemen
 export const fetchUserAchievements = (userId: string): Promise<UserAchievementResponse[]> =>
   req(`/api/achievements/user/${userId}`)
 
+export const fetchPublicAchievements = (userId: string): Promise<UserAchievementResponse[]> =>
+  req(`/api/achievements/user/${userId}/public`)
+
 export const toggleDisplayAchievement = (userAchievementId: string): Promise<UserAchievementResponse> =>
   req(`/api/achievements/display/${userAchievementId}`, "PUT")
 

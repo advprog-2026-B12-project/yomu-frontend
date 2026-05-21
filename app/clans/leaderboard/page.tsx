@@ -185,6 +185,26 @@ export default function LeaderboardPage() {
                     </div>
 
                     <div className="flex items-center gap-3 shrink-0">
+                      {entry.activeModifiers?.length > 0 && (
+                        <div className="flex gap-1">
+                          {entry.activeModifiers.map((mod) => {
+                            const isDebuff = /penalty|debuff/i.test(mod)
+                            return (
+                              <span
+                                key={mod}
+                                title={mod}
+                                className={`text-xs font-semibold px-1.5 py-0.5 rounded-full ${
+                                  isDebuff
+                                    ? "bg-red-100 text-red-700"
+                                    : "bg-green-100 text-green-700"
+                                }`}
+                              >
+                                {isDebuff ? "▼" : "▲"} {mod}
+                              </span>
+                            )
+                          })}
+                        </div>
+                      )}
                       <span
                         className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
                           DIVISION_STYLES[entry.division as Division]?.badge ??

@@ -31,4 +31,6 @@ export interface LeaderboardEntry {
   division: string
   memberCount: number
   score: number
+  scoreMultiplier: number
+  activeModifiers: string[]
 }
