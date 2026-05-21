@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { PlusIcon, Trophy } from "lucide-react";
+import { PlusIcon, Trophy, PencilIcon, Trash2Icon } from "lucide-react";
 import { useAuth } from "@/app/providers/AuthProvider";
 import { Navbar } from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   fetchAllAchievements,
   createAchievement,
+  updateAchievement,
+  deleteAchievement,
   triggerAchievementEvent,
 } from "@/features/achievements/api";
 import type { AchievementResponse, AchievementRequest, EventTriggerResponse } from "@/features/achievements/types";
@@ -62,6 +64,11 @@ export default function AdminAchievementsPage() {
   const [form, setForm] = useState<AchievementRequest>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+
+  const [editOpen, setEditOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState<AchievementResponse | null>(null);
+  const [editForm, setEditForm] = useState<AchievementRequest>(EMPTY_FORM);
+  const [editError, setEditError] = useState<string | null>(null);
 
   const [triggerUserId, setTriggerUserId] = useState("");
   const [triggerEventType, setTriggerEventType] = useState<string>(ACHIEVEMENT_EVENT_TYPES[0]);
@@ -108,6 +115,60 @@ export default function AdminAchievementsPage() {
       setFormError(e instanceof Error ? e.message : "Gagal membuat achievement");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleOpenEdit = (ach: AchievementResponse) => {
+    setEditTarget(ach);
+    setEditForm({
+      name: ach.name,
+      description: ach.description,
+      iconUrl: ach.iconUrl ?? "",
+      points: ach.points,
+      milestone: ach.milestone,
+      eventType: ach.eventType,
+    });
+    setEditError(null);
+    setEditOpen(true);
+  };
+
+  const handleUpdate = async () => {
+    if (!editTarget) return;
+    if (!editForm.name.trim() || !editForm.description.trim() || !editForm.eventType) {
+      setEditError("Nama, deskripsi, dan event type wajib diisi.");
+      return;
+    }
+    if (editForm.points < 0 || editForm.milestone < 1) {
+      setEditError("Poin tidak boleh negatif, milestone minimal 1.");
+      return;
+    }
+    setSaving(true);
+    setEditError(null);
+    try {
+      const updated = await updateAchievement(editTarget.id, {
+        name: editForm.name.trim(),
+        description: editForm.description.trim(),
+        iconUrl: editForm.iconUrl?.trim() || undefined,
+        points: Number(editForm.points),
+        milestone: Number(editForm.milestone),
+        eventType: editForm.eventType,
+      });
+      setAchievements((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
+      setEditOpen(false);
+    } catch (e: unknown) {
+      setEditError(e instanceof Error ? e.message : "Gagal mengupdate achievement");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!window.confirm("Hapus achievement ini?")) return;
+    try {
+      await deleteAchievement(id);
+      setAchievements((prev) => prev.filter((a) => a.id !== id));
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Gagal menghapus achievement");
     }
   };
 
@@ -170,13 +231,23 @@ export default function AdminAchievementsPage() {
                       <CardTitle className="text-sm">{ach.name}</CardTitle>
                       <CardDescription className="mt-0.5">{ach.description}</CardDescription>
                     </div>
-                    <div className="flex flex-col items-end gap-1 shrink-0 text-right">
-                      <span className="text-xs bg-amber-100 text-amber-700 rounded-full px-2 py-0.5 font-medium">
-                        {ach.eventType}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        Milestone: {ach.milestone} · {ach.points} poin
-                      </span>
+                    <div className="flex items-start gap-2 shrink-0">
+                      <div className="flex flex-col items-end gap-1 text-right">
+                        <span className="text-xs bg-amber-100 text-amber-700 rounded-full px-2 py-0.5 font-medium">
+                          {ach.eventType}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          Milestone: {ach.milestone} · {ach.points} poin
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-0.5">
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleOpenEdit(ach)}>
+                          <PencilIcon className="size-3.5" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => handleDelete(ach.id)}>
+                          <Trash2Icon className="size-3.5" />
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </CardHeader>
@@ -245,6 +316,87 @@ export default function AdminAchievementsPage() {
             </Button>
           </div>
         </div>
+
+        {/* Edit Dialog */}
+        <Dialog open={editOpen} onOpenChange={(v) => { setEditOpen(v); setEditError(null); }}>
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Edit Achievement</DialogTitle>
+            </DialogHeader>
+            <div className="flex flex-col gap-4 py-2">
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="edit-ach-name">Nama</Label>
+                <Input
+                  id="edit-ach-name"
+                  placeholder="Nama achievement..."
+                  value={editForm.name}
+                  onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="edit-ach-desc">Deskripsi</Label>
+                <Textarea
+                  id="edit-ach-desc"
+                  placeholder="Deskripsi achievement..."
+                  value={editForm.description}
+                  onChange={(e) => setEditForm((f) => ({ ...f, description: e.target.value }))}
+                  className="min-h-20 resize-y"
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="edit-ach-icon">Icon URL (opsional)</Label>
+                <Input
+                  id="edit-ach-icon"
+                  placeholder="https://..."
+                  value={editForm.iconUrl ?? ""}
+                  onChange={(e) => setEditForm((f) => ({ ...f, iconUrl: e.target.value }))}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="edit-ach-points">Poin</Label>
+                  <Input
+                    id="edit-ach-points"
+                    type="number"
+                    min={0}
+                    value={editForm.points}
+                    onChange={(e) => setEditForm((f) => ({ ...f, points: Number(e.target.value) }))}
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="edit-ach-milestone">Milestone</Label>
+                  <Input
+                    id="edit-ach-milestone"
+                    type="number"
+                    min={1}
+                    value={editForm.milestone}
+                    onChange={(e) => setEditForm((f) => ({ ...f, milestone: Number(e.target.value) }))}
+                  />
+                </div>
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="edit-ach-event">Event Type</Label>
+                <select
+                  id="edit-ach-event"
+                  value={editForm.eventType}
+                  onChange={(e) => setEditForm((f) => ({ ...f, eventType: e.target.value }))}
+                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                >
+                  {ACHIEVEMENT_EVENT_TYPES.map((et) => (
+                    <option key={et} value={et}>{et}</option>
+                  ))}
+                </select>
+              </div>
+              {editError && <p className="text-sm text-destructive">{editError}</p>}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setEditOpen(false)}>Batal</Button>
+              <Button onClick={handleUpdate} disabled={saving}>
+                {saving ? "Menyimpan..." : "Simpan"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* Create Dialog */}
         <Dialog open={open} onOpenChange={(v) => { setOpen(v); setFormError(null); }}>
