@@ -2,10 +2,10 @@ export type ReactionType =
   | "UPVOTE"
   | "DOWNVOTE"
   | "FIRE"
-  | "THINKING"
-  | "CLAP"
-  | "SURPRISED"
-  | "LOVE";
+  | "ROCKET"
+  | "LAUGH"
+  | "PARTY"
+  | "THINKING";
 
 export type Comment = {
   id: string;

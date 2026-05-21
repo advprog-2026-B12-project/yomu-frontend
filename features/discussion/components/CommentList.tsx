@@ -160,13 +160,11 @@ export function CommentList({ readingId }: CommentListProps) {
       } else {
         await withAuth(() => removeReaction(commentId));
       }
-      // Optimistically update local state so UI feels snappy
-      setComments((prev) =>
-        prev.map((c) => {
-          if (c.id !== commentId) return c;
-          const old = c.myReaction;
+      const updateCommentReaction = (comment: Comment): Comment => {
+        if (comment.id === commentId) {
+          const old = comment.myReaction;
           const nextCounts: Partial<Record<ReactionType, number>> = {
-            ...(c.reactionCounts ?? {}),
+            ...(comment.reactionCounts ?? {}),
           };
           if (old) {
             nextCounts[old] = Math.max((nextCounts[old] ?? 0) - 1, 0);
@@ -174,9 +172,21 @@ export function CommentList({ readingId }: CommentListProps) {
           if (reactionType) {
             nextCounts[reactionType] = (nextCounts[reactionType] ?? 0) + 1;
           }
-          return { ...c, myReaction: reactionType, reactionCounts: nextCounts };
-        }),
-      );
+          return { ...comment, myReaction: reactionType, reactionCounts: nextCounts };
+        }
+        
+        // Rekursif update replies
+        if (comment.replies?.length > 0) {
+          return {
+            ...comment,
+            replies: comment.replies.map(updateCommentReaction),
+          };
+        }
+        
+        return comment;
+      };
+
+      setComments((prev) => prev.map(updateCommentReaction));
     },
     [withAuth],
   );
@@ -221,7 +231,7 @@ export function CommentList({ readingId }: CommentListProps) {
           onClick={() => handleSortChange("most_upvoted")}
           aria-label="Urutkan komentar paling banyak upvote"
         >
-          Paling Populer
+          Most Upvoted
         </Button>
       </div>
 
@@ -272,4 +282,5 @@ export function CommentList({ readingId }: CommentListProps) {
     </div>
   );
 }
+
 
