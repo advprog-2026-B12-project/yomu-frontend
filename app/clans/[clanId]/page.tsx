@@ -381,12 +381,12 @@ export default function ClanDetailPage({
                           </AvatarFallback>
                         </Avatar>
                         <div>
-                          <p className="text-sm font-medium">
+                          <Link href={`/users/${member.userId}`} className="text-sm font-medium hover:underline">
                             {memberNames[member.userId] ?? member.userId.slice(0, 8)}
                             {member.userId === userId && (
                               <span className="ml-1 text-xs text-muted-foreground">(Kamu)</span>
                             )}
-                          </p>
+                          </Link>
                         </div>
                       </div>
                       <span
