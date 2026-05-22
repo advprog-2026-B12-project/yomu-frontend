@@ -35,7 +35,7 @@ interface CommentCardProps {
   ) => Promise<void>;
 }
 
-const MAX_INDENT_DEPTH = 5;
+const MAX_INDENT_DEPTH = 2;
 
 const REACTION_MAP: Record<ReactionType, string> = {
   UPVOTE: "⬆️",
@@ -243,14 +243,16 @@ export function CommentCard({
             )}
 
             <div className="flex flex-wrap items-center gap-1 pt-1">
-              <Button
-                type="button"
-                size="xs"
-                variant="ghost"
-                onClick={() => setReplying((v) => !v)}
-              >
-                {replying ? "Tutup" : "Balas"}
-              </Button>
+              {depth < MAX_INDENT_DEPTH && (
+                <Button
+                  type="button"
+                  size="xs"
+                  variant="ghost"
+                  onClick={() => setReplying((v) => !v)}
+                >
+                  {replying ? "Tutup" : "Balas"}
+                </Button>
+              )}
               {isOwn && !editing && (
                 <>
                   <Button
@@ -341,7 +343,7 @@ export function CommentCard({
         </DialogContent>
       </Dialog>
 
-      {replying && (
+      {replying && depth < MAX_INDENT_DEPTH && (
         <div className="pl-4">
           <ReplyForm
             submitting={submitting}
