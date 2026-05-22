@@ -107,6 +107,11 @@ export function CommentCard({
   const displayName = authorUsername ?? shortId(comment.authorId);
   const isOwn = Boolean(currentUserId) && comment.authorId === currentUserId;
   const indentDepth = Math.min(depth, MAX_INDENT_DEPTH);
+  const isDeletedComment =
+    comment.deleted === true ||
+    comment.isDeleted === true ||
+    comment.content === "Komentar telah dihapus" ||
+    comment.content === "Komentar sudah dihapus";
 
   async function handleSubmitReply(content: string) {
     setSubmitting(true);
@@ -172,28 +177,36 @@ export function CommentCard({
       <Card>
         <CardContent className="flex gap-4 pt-6">
           <Avatar>
-            <AvatarFallback>{getAvatarFallback(displayName)}</AvatarFallback>
+            <AvatarFallback>
+              {isDeletedComment ? "?" : getAvatarFallback(displayName)}
+            </AvatarFallback>
           </Avatar>
           <div className="flex flex-col gap-2 flex-1 min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <Link
-                href={`/users/${comment.authorId}`}
-                className="font-semibold text-sm hover:underline"
-              >
-                {displayName}
-                {isOwn && (
-                  <span className="ml-1 text-xs text-muted-foreground">
-                    (Kamu)
-                  </span>
-                )}
-              </Link>
+              {isDeletedComment ? (
+                <span className="font-semibold text-sm text-muted-foreground italic">
+                  [Pengguna dihapus]
+                </span>
+              ) : (
+                <Link
+                  href={`/users/${comment.authorId}`}
+                  className="font-semibold text-sm hover:underline"
+                >
+                  {displayName}
+                  {isOwn && (
+                    <span className="ml-1 text-xs text-muted-foreground">
+                      (Kamu)
+                    </span>
+                  )}
+                </Link>
+              )}
               <span
                 className="text-xs text-muted-foreground"
                 title={formatAbsoluteTime(comment.createdAt)}
               >
                 {formatRelativeTime(comment.createdAt)}
               </span>
-              {comment.editedAt && (
+              {!isDeletedComment && comment.editedAt && (
                 <span
                   className="text-xs italic text-muted-foreground"
                   title={`Diedit ${formatAbsoluteTime(comment.editedAt)}`}
@@ -203,7 +216,11 @@ export function CommentCard({
               )}
             </div>
 
-            {editing ? (
+            {isDeletedComment ? (
+              <p className="text-sm italic text-muted-foreground opacity-60 bg-gray-50/50 p-2 rounded border-l-2 border-gray-300">
+                {comment.content}
+              </p>
+            ) : editing ? (
               <div className="flex flex-col gap-2">
                 <Textarea
                   value={editValue}
@@ -244,27 +261,40 @@ export function CommentCard({
               </p>
             )}
 
-            <div className="flex flex-wrap items-center gap-1 pt-1">
-              {depth < MAX_INDENT_DEPTH && (
-                <Button
-                  type="button"
-                  size="xs"
-                  variant="ghost"
-                  onClick={() => setReplying((v) => !v)}
-                >
-                  {replying ? "Tutup" : "Balas"}
-                </Button>
-              )}
-              {isOwn && !editing && (
-                <>
+            {!isDeletedComment && (
+              <div className="flex flex-wrap items-center gap-1 pt-1">
+                {depth < MAX_INDENT_DEPTH && (
                   <Button
                     type="button"
                     size="xs"
                     variant="ghost"
-                    onClick={() => setEditing(true)}
+                    onClick={() => setReplying((v) => !v)}
                   >
-                    Edit
+                    {replying ? "Tutup" : "Balas"}
                   </Button>
+                )}
+                {isOwn && !editing && (
+                  <>
+                    <Button
+                      type="button"
+                      size="xs"
+                      variant="ghost"
+                      onClick={() => setEditing(true)}
+                    >
+                      Edit
+                    </Button>
+                    <Button
+                      type="button"
+                      size="xs"
+                      variant="ghost"
+                      className="text-destructive hover:text-destructive"
+                      onClick={() => setDeleteOpen(true)}
+                    >
+                      Hapus
+                    </Button>
+                  </>
+                )}
+                {isAdmin && !isOwn && (
                   <Button
                     type="button"
                     size="xs"
@@ -272,45 +302,36 @@ export function CommentCard({
                     className="text-destructive hover:text-destructive"
                     onClick={() => setDeleteOpen(true)}
                   >
-                    Hapus
+                    Hapus (Admin)
                   </Button>
-                </>
-              )}
-              {isAdmin && !isOwn && (
-                <Button
-                  type="button"
-                  size="xs"
-                  variant="ghost"
-                  className="text-destructive hover:text-destructive"
-                  onClick={() => setDeleteOpen(true)}
-                >
-                  Hapus (Admin)
-                </Button>
-              )}
-            </div>
+                )}
+              </div>
+            )}
 
-            <div className="flex flex-wrap items-center gap-1 pt-1">
-              {REACTION_TYPES.map((type) => {
-                const count = comment.reactionCounts?.[type] ?? 0;
-                const active = comment.myReaction === type;
-                return (
-                  <Button
-                    key={type}
-                    type="button"
-                    size="xs"
-                    variant={active ? "secondary" : "ghost"}
-                    className="gap-1"
-                    onClick={() => handleReactionClick(type)}
-                    title={type}
-                  >
-                    <span>{REACTION_MAP[type]}</span>
-                    {count > 0 && (
-                      <span className="text-xs tabular-nums">{count}</span>
-                    )}
-                  </Button>
-                );
-              })}
-            </div>
+            {!isDeletedComment && (
+              <div className="flex flex-wrap items-center gap-1 pt-1">
+                {REACTION_TYPES.map((type) => {
+                  const count = comment.reactionCounts?.[type] ?? 0;
+                  const active = comment.myReaction === type;
+                  return (
+                    <Button
+                      key={type}
+                      type="button"
+                      size="xs"
+                      variant={active ? "secondary" : "ghost"}
+                      className="gap-1"
+                      onClick={() => handleReactionClick(type)}
+                      title={type}
+                    >
+                      <span>{REACTION_MAP[type]}</span>
+                      {count > 0 && (
+                        <span className="text-xs tabular-nums">{count}</span>
+                      )}
+                    </Button>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -345,7 +366,7 @@ export function CommentCard({
         </DialogContent>
       </Dialog>
 
-      {replying && depth < MAX_INDENT_DEPTH && (
+      {replying && !isDeletedComment && depth < MAX_INDENT_DEPTH && (
         <div className="pl-4">
           <ReplyForm
             submitting={submitting}
