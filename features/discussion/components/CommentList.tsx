@@ -197,7 +197,7 @@ export function CommentList({ readingId }: CommentListProps) {
 
   return (
     <div className="flex flex-col gap-6">
-      <section aria-label="Tulis komentar baru" className="flex flex-col gap-2">
+      <section className="flex flex-col gap-2">
         {authLoading ? (
           <Skeleton className="h-24 w-full" />
         ) : isLoggedIn ? (
@@ -220,7 +220,6 @@ export function CommentList({ readingId }: CommentListProps) {
           size="xs"
           variant={sort === "newest" ? "secondary" : "ghost"}
           onClick={() => handleSortChange("newest")}
-          aria-label="Urutkan komentar terbaru"
         >
           Terbaru
         </Button>
@@ -229,13 +228,12 @@ export function CommentList({ readingId }: CommentListProps) {
           size="xs"
           variant={sort === "most_upvoted" ? "secondary" : "ghost"}
           onClick={() => handleSortChange("most_upvoted")}
-          aria-label="Urutkan komentar paling banyak upvote"
         >
           Most Upvoted
         </Button>
       </div>
 
-      <section aria-label="Daftar komentar" className="flex flex-col gap-4">
+      <section className="flex flex-col gap-4">
         {loading && comments.length === 0 ? (
           <div className="flex flex-col gap-4">
             {Array.from({ length: 3 }).map((_, i) => (
@@ -270,7 +268,6 @@ export function CommentList({ readingId }: CommentListProps) {
                   variant="outline"
                   onClick={() => loadComments(page + 1, true)}
                   disabled={loading}
-                  aria-label="Muat lebih banyak komentar"
                 >
                   {loading ? "Memuat..." : "Muat lebih banyak"}
                 </Button>
