@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { adminGetQuestions, adminCreateQuestion, adminDeleteQuestion } from "../../api";
 import { Question } from "../../types";
 import { OptionManager } from "./OptionManager";
+import { ConfirmDialog } from "./ConfirmDialog";
 
 interface QuestionManagerProps {
     readingId: string;
@@ -20,6 +21,7 @@ export function QuestionManager({ readingId }: QuestionManagerProps) {
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [expanded, setExpanded] = useState<Set<string>>(new Set());
+    const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
     useEffect(() => {
         setLoading(true);
@@ -55,12 +57,18 @@ export function QuestionManager({ readingId }: QuestionManagerProps) {
         }
     };
 
-    const handleDelete = async (id: string) => {
+    const handleDelete = async () => {
+        if (!deleteTarget) return;
+        console.log("Deleting question:", deleteTarget)
         try {
-            await adminDeleteQuestion(id);
-            setQuestions((prev) => prev.filter((q) => q.id !== id));
+            await adminDeleteQuestion(deleteTarget);
+            console.log("Delete successful")
+            setQuestions((prev) => prev.filter((q) => q.id !== deleteTarget));
         } catch (e: unknown) {
+            console.error("Delete failed:", e)
             setError(e instanceof Error ? e.message : "Gagal menghapus pertanyaan");
+        } finally {
+            setDeleteTarget(null);
         }
     };
 
@@ -105,7 +113,7 @@ export function QuestionManager({ readingId }: QuestionManagerProps) {
                                 variant="ghost"
                                 size="icon-sm"
                                 className="text-destructive hover:text-destructive"
-                                onClick={() => handleDelete(q.id)}
+                                onClick={() => setDeleteTarget(q.id)}
                             >
                                 <Trash2Icon />
                             </Button>
@@ -135,6 +143,14 @@ export function QuestionManager({ readingId }: QuestionManagerProps) {
             </div>
 
             {error && <p className="text-sm text-destructive">{error}</p>}
+
+            <ConfirmDialog
+                open={!!deleteTarget}
+                title="Hapus Pertanyaan?"
+                description="Pertanyaan dan semua opsinya akan dihapus permanen."
+                onConfirm={handleDelete}
+                onCancel={() => setDeleteTarget(null)}
+            />
         </div>
     );
 }

@@ -9,13 +9,25 @@ import {
 
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
+function authHeaders(): Record<string, string> {
+    if (typeof window === "undefined") return {};
+    const token = localStorage.getItem("token");
+    return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
     const res = await fetch(`${BASE}${path}`, {
-        headers: { "Content-Type": "application/json" },
+        cache: "no-store",
         ...init,
+        headers: {
+            "Content-Type": "application/json",
+            ...authHeaders(),
+            ...(init?.headers ?? {}),
+        },
     });
-    if (!res.ok) throw new Error(`Request failed: ${res.status}`);
+
     if (res.status === 204) return undefined as T;
+    if (!res.ok) throw new Error(`Request failed: ${res.status}`);
     return res.json();
 }
 
@@ -57,10 +69,19 @@ export const adminGetOptions = (questionId: string): Promise<Option[]> =>
 
 export const adminCreateOption = (
     questionId: string,
-    body: OptionRequest
+    body: { optionText: string; correct: boolean }
 ): Promise<Option> =>
     request(`/api/admin/options/${questionId}`, {
         method: "POST",
+        body: JSON.stringify(body),
+    });
+
+export const adminUpdateOption = (
+    optionId: string,
+    body: { optionText: string; correct: boolean }
+): Promise<Option> =>
+    request(`/api/admin/options/${optionId}`, {
+        method: "PUT",
         body: JSON.stringify(body),
     });
 

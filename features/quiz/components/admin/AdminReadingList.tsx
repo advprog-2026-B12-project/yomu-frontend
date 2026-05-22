@@ -20,6 +20,7 @@ import { Separator } from "@/components/ui/separator";
 import { adminGetReadings, adminCreateReading, adminDeleteReading } from "../../api";
 import { Reading } from "../../types";
 import { QuestionManager } from "./QuestionManager";
+import { ConfirmDialog } from "./ConfirmDialog";
 
 function ReadingSkeleton() {
     return (
@@ -35,16 +36,13 @@ export function AdminReadingList() {
     const [readings, setReadings] = useState<Reading[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-
-    // Create dialog state
     const [open, setOpen] = useState(false);
     const [title, setTitle] = useState("");
     const [content, setContent] = useState("");
     const [saving, setSaving] = useState(false);
     const [formError, setFormError] = useState<string | null>(null);
-
-    // Expanded reading for question management
     const [expandedId, setExpandedId] = useState<string | null>(null);
+    const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
     useEffect(() => {
         adminGetReadings()
@@ -73,13 +71,16 @@ export function AdminReadingList() {
         }
     };
 
-    const handleDelete = async (id: string) => {
+    const handleDelete = async () => {
+        if (!deleteTarget) return;
         try {
-            await adminDeleteReading(id);
-            setReadings((prev) => prev.filter((r) => r.id !== id));
-            if (expandedId === id) setExpandedId(null);
+            await adminDeleteReading(deleteTarget);
+            setReadings((prev) => prev.filter((r) => r.id !== deleteTarget));
+            if (expandedId === deleteTarget) setExpandedId(null);
         } catch (e: unknown) {
             setError(e instanceof Error ? e.message : "Gagal menghapus bacaan");
+        } finally {
+            setDeleteTarget(null);
         }
     };
 
@@ -196,7 +197,7 @@ export function AdminReadingList() {
                                             variant="ghost"
                                             size="icon-sm"
                                             className="text-destructive hover:text-destructive"
-                                            onClick={() => handleDelete(reading.id)}
+                                            onClick={() => setDeleteTarget(reading.id)}
                                         >
                                             <Trash2Icon />
                                         </Button>
@@ -214,6 +215,15 @@ export function AdminReadingList() {
                     ))}
                 </div>
             )}
+
+            <ConfirmDialog
+                open={!!deleteTarget}
+                title="Hapus Bacaan?"
+                description="Bacaan ini beserta semua pertanyaan dan opsinya akan dihapus permanen."
+                onConfirm={handleDelete}
+                onCancel={() => setDeleteTarget(null)}
+            />
+
         </div>
     );
 }

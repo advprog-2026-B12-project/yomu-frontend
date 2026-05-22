@@ -1,7 +1,7 @@
 export interface Option {
     id: string;
     optionText: string;
-    isCorrect: boolean;
+    correct: boolean;
 }
 
 export interface Question {
@@ -17,7 +17,7 @@ export interface Reading {
     questions?: Question[];
 }
 
-// ── Admin request/response shapes ──────────────────────────────────────────
+// Admin request/response shapes
 
 export interface ReadingRequest {
     title: string;
