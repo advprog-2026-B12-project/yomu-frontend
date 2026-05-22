@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { AuthProvider } from "./providers/AuthProvider";
+import { AchievementProvider } from "./providers/AchievementProvider";
 
 export const metadata: Metadata = {
   title: "Yomu Integration Test",
@@ -15,7 +16,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="antialiased bg-gray-50 text-gray-900">
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          <AchievementProvider>{children}</AchievementProvider>
+        </AuthProvider>
       </body>
     </html>
   );

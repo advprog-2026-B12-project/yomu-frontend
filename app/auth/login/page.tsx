@@ -70,7 +70,6 @@ export default function LoginPage() {
       })
 
       const data = await response.json()
-      console.log("[Google SSO] Backend response:", data)
 
       if (response.ok && data.token) {
         const user = data.user
@@ -89,9 +88,17 @@ export default function LoginPage() {
       }
 
       if (data.needsRegistration) {
+        const email = data.email ?? data.user?.email
+        const googleName = data.googleName ?? data.user?.displayName ?? ""
+
+        if (!email) {
+          setMessage("Login Google gagal: response tidak mengandung email.")
+          return
+        }
+
         sessionStorage.setItem(
           "sso_pending",
-          JSON.stringify({ email: data.user.email, googleName: data.user.displayName ?? "" })
+          JSON.stringify({ email, googleName })
         )
         router.push("/auth/register/complete")
         return

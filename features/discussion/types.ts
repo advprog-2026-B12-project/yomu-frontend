@@ -2,10 +2,10 @@ export type ReactionType =
   | "UPVOTE"
   | "DOWNVOTE"
   | "FIRE"
-  | "THINKING"
-  | "CLAP"
-  | "SURPRISED"
-  | "LOVE";
+  | "ROCKET"
+  | "LAUGH"
+  | "PARTY"
+  | "THINKING";
 
 export type Comment = {
   id: string;
@@ -13,7 +13,8 @@ export type Comment = {
   authorId: string;
   parentId: string | null;
   content: string;
-  deleted: boolean;
+  deleted?: boolean;
+  isDeleted?: boolean;
   createdAt: string;
   updatedAt: string;
   editedAt: string | null;
@@ -29,8 +30,6 @@ export type CommentRequest = {
 export type ReactionRequest = {
   reactionType: ReactionType;
 };
-
-export type SortOption = "newest" | "most_upvoted";
 
 export type PaginatedComments = {
   content: Comment[];

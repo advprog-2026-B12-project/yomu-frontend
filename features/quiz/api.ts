@@ -31,7 +31,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     return res.json();
 }
 
-// ── Admin: Readings ─────────────────────────────────────────────────────────
+// Admin: Readings
 
 export const adminGetReadings = (): Promise<Reading[]> =>
     request("/api/admin/readings");
@@ -45,7 +45,7 @@ export const adminCreateReading = (body: ReadingRequest): Promise<Reading> =>
 export const adminDeleteReading = (id: string): Promise<void> =>
     request(`/api/admin/readings/${id}`, { method: "DELETE" });
 
-// ── Admin: Questions ────────────────────────────────────────────────────────
+// Admin: Questions
 
 export const adminGetQuestions = (readingId: string): Promise<Question[]> =>
     request(`/api/admin/questions/reading/${readingId}`);
@@ -62,7 +62,7 @@ export const adminCreateQuestion = (
 export const adminDeleteQuestion = (questionId: string): Promise<void> =>
     request(`/api/admin/questions/${questionId}`, { method: "DELETE" });
 
-// ── Admin: Options ──────────────────────────────────────────────────────────
+// Admin: Options
 
 export const adminGetOptions = (questionId: string): Promise<Option[]> =>
     request(`/api/admin/options/question/${questionId}`);
