@@ -26,10 +26,7 @@ type Reading = {
 type QuizSubmitRequest = {
     userId: string
     readingId: string
-    answers: {
-        questionId: string
-        optionId: string
-    }[]
+    answers: Record<string, string>
 }
 
 async function getQuiz(readingId: string): Promise<Reading> {
@@ -58,6 +55,7 @@ export default function QuizPage({
     const [submitted, setSubmitted] = useState(false)
     const [score, setScore] = useState(0)
     const [alreadyCompleted, setAlreadyCompleted] = useState(false)
+    const [previousScore, setPreviousScore] = useState<{score: number, total: number} | null>(null)
 
     useEffect(() => {
         getQuiz(readingId).then(setReading)
@@ -70,6 +68,9 @@ export default function QuizPage({
             .then((res) => res.json())
             .then((data) => {
                 setAlreadyCompleted(data.completed)
+                if (data.completed) {
+                    setPreviousScore({ score: data.score, total: data.total })
+                }
             })
             .catch((err) => {
                 console.error(err)
@@ -91,16 +92,13 @@ export default function QuizPage({
     async function handleSubmit() {
         if (!reading) return
 
-        const token = localStorage.getItem("token")
-
-        const formattedAnswers = Object.entries(answers).map(
-            ([questionId, optionId]) => ({ questionId, optionId })
-        )
+        const token = localStorage.getItem("token");
+        const userId = localStorage.getItem("userId") ?? "";
 
         const payload: QuizSubmitRequest = {
             userId: userId,
             readingId: reading.id,
-            answers: formattedAnswers,
+            answers: answers,
         }
 
         try {
@@ -144,9 +142,16 @@ export default function QuizPage({
     if (alreadyCompleted) {
         return (
             <div className="max-w-2xl mx-auto p-6 flex flex-col gap-6">
-                <h1 className="text-2xl font-bold">
-                    Quiz already completed
-                </h1>
+                <h1 className="text-2xl font-bold">{reading?.title}</h1>
+
+                <div className="p-6 border rounded-xl text-center flex flex-col gap-2">
+                    <p className="text-lg font-semibold">You've already completed this quiz.</p>
+                    {previousScore && (
+                        <p className="text-3xl font-bold text-primary">
+                            {previousScore.score} / {previousScore.total}
+                        </p>
+                    )}
+                </div>
 
                 <a
                     href={`/readings/${readingId}`}
