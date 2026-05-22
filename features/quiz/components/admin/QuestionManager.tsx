@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { PlusIcon, Trash2Icon, ChevronDownIcon, ChevronUpIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,13 +23,18 @@ export function QuestionManager({ readingId }: QuestionManagerProps) {
     const [expanded, setExpanded] = useState<Set<string>>(new Set());
     const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
-    useEffect(() => {
+    const loadQuestions = useCallback(() => {
         setLoading(true);
+
         adminGetQuestions(readingId)
             .then(setQuestions)
             .catch((e: Error) => setError(e.message))
             .finally(() => setLoading(false));
     }, [readingId]);
+
+    useEffect(() => {
+        loadQuestions();
+    }, [loadQuestions]);
 
     const toggleExpand = (id: string) => {
         setExpanded((prev) => {

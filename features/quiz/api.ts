@@ -4,7 +4,6 @@ import {
     Option,
     ReadingRequest,
     QuestionRequest,
-    OptionRequest,
 } from "./types";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";

@@ -120,7 +120,7 @@ export default function QuizPage({
                 console.error("BACKEND ERROR:", text)
 
                 if (res.status === 409) {
-                    alert("You already completed this quiz.")
+                    alert("You have already completed this quiz.")
                     return
                 }
 
@@ -145,7 +145,7 @@ export default function QuizPage({
                 <h1 className="text-2xl font-bold">{reading?.title}</h1>
 
                 <div className="p-6 border rounded-xl text-center flex flex-col gap-2">
-                    <p className="text-lg font-semibold">You've already completed this quiz.</p>
+                    <p className="text-lg font-semibold">You have already completed this quiz.</p>
                     {previousScore && (
                         <p className="text-3xl font-bold text-primary">
                             {previousScore.score} / {previousScore.total}

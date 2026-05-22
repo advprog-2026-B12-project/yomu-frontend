@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { PlusIcon, Trash2Icon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,15 +24,18 @@ export function OptionManager({ questionId }: OptionManagerProps) {
 
     const isOptionCorrect = (opt: Option) => opt.correct;
 
-    const load = () => {
+    const load = useCallback(() => {
         setLoading(true);
+
         adminGetOptions(questionId)
             .then(setOptions)
             .catch((e: Error) => setError(e.message))
             .finally(() => setLoading(false));
-    };
+    }, [questionId]);
 
-    useEffect(() => { load(); }, [questionId]);
+    useEffect(() => {
+        load();
+    }, [load]);
 
     const handleAdd = async () => {
         if (!optionText.trim()) return;
