@@ -58,8 +58,10 @@ export default function AchievementsPage() {
     if (isLoading || !userId) return;
 
     let mounted = true;
-    setIsFetching(true);
-    setError("");
+    queueMicrotask(() => {
+      setIsFetching(true);
+      setError("");
+    });
 
     Promise.all([
       fetchUserAchievementProgress(userId),

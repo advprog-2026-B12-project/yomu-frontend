@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import { useCallback, useEffect, useState, use } from "react"
 import { useRouter } from "next/navigation"
@@ -96,118 +96,142 @@ export default function ClanDetailPage({
       const [clanData, memberData] = await Promise.all([
         getClan(numericClanId),
         getClanMembers(numericClanId),
-      ])
-      setClan(clanData)
-      setMembers(memberData)
+      ]);
+      setClan(clanData);
+      setMembers(memberData);
 
       const nameEntries = await Promise.all(
-        memberData.map(async (m) => [m.userId, await fetchDisplayName(m.userId)] as const)
-      )
-      setMemberNames(Object.fromEntries(nameEntries))
+        memberData.map(
+          async (m) => [m.userId, await fetchDisplayName(m.userId)] as const,
+        ),
+      );
+      setMemberNames(Object.fromEntries(nameEntries));
 
       if (memberData.find((m) => m.role === "LEADER" && m.userId === userId)) {
-        const requests = await getPendingJoinRequests(numericClanId).catch(() => [])
-        const pending = requests.filter((r) => r.status === "PENDING")
-        setJoinRequests(pending)
+        const requests = await getPendingJoinRequests(numericClanId).catch(
+          () => [],
+        );
+        const pending = requests.filter((r) => r.status === "PENDING");
+        setJoinRequests(pending);
 
         const extraEntries = await Promise.all(
           pending
             .filter((r) => !nameEntries.some(([id]) => id === r.userId))
-            .map(async (r) => [r.userId, await fetchDisplayName(r.userId)] as const)
-        )
+            .map(
+              async (r) =>
+                [r.userId, await fetchDisplayName(r.userId)] as const,
+            ),
+        );
         if (extraEntries.length > 0) {
-          setMemberNames((prev) => ({ ...prev, ...Object.fromEntries(extraEntries) }))
+          setMemberNames((prev) => ({
+            ...prev,
+            ...Object.fromEntries(extraEntries),
+          }));
         }
       }
     } catch {
-      setError("Gagal memuat data clan. Coba refresh halaman.")
+      setError("Gagal memuat data clan. Coba refresh halaman.");
     } finally {
-      setFetching(false)
+      setFetching(false);
     }
-  }, [numericClanId, userId])
+  }, [numericClanId, userId]);
 
   useEffect(() => {
     if (!isLoading && !username) {
-      router.push("/")
-      return
+      router.push("/");
+      return;
     }
-    if (!isLoading) load()
-  }, [isLoading, username, router, load])
+    if (!isLoading) {
+      queueMicrotask(() => {
+        load();
+      });
+    }
+  }, [isLoading, username, router, load]);
 
   async function handleJoin() {
-    setActionLoading(true)
-    setActionMsg("")
+    setActionLoading(true);
+    setActionMsg("");
     try {
-      await requestToJoinClan(numericClanId)
-      setIsActionError(false)
-      setActionMsg("Permintaan bergabung terkirim! Tunggu persetujuan leader.")
+      await requestToJoinClan(numericClanId);
+      setIsActionError(false);
+      setActionMsg("Permintaan bergabung terkirim! Tunggu persetujuan leader.");
     } catch (err) {
-      setIsActionError(true)
-      setActionMsg(err instanceof Error ? err.message : "Gagal mengirim permintaan.")
+      setIsActionError(true);
+      setActionMsg(
+        err instanceof Error ? err.message : "Gagal mengirim permintaan.",
+      );
     } finally {
-      setActionLoading(false)
+      setActionLoading(false);
     }
   }
 
   async function handleLeave() {
-    setActionLoading(true)
+    setActionLoading(true);
     try {
-      await leaveClan()
-      router.push("/clans")
+      await leaveClan();
+      router.push("/clans");
     } catch (err) {
-      setIsActionError(true)
-      setActionMsg(err instanceof Error ? err.message : "Gagal keluar dari clan.")
-      setLeaveDialogOpen(false)
+      setIsActionError(true);
+      setActionMsg(
+        err instanceof Error ? err.message : "Gagal keluar dari clan.",
+      );
+      setLeaveDialogOpen(false);
     } finally {
-      setActionLoading(false)
+      setActionLoading(false);
     }
   }
 
   async function handleDelete() {
-    setActionLoading(true)
+    setActionLoading(true);
     try {
-      await deleteClan(numericClanId)
-      router.push("/clans")
+      await deleteClan(numericClanId);
+      router.push("/clans");
     } catch (err) {
-      setIsActionError(true)
-      setActionMsg(err instanceof Error ? err.message : "Gagal menghapus clan.")
-      setDeleteDialogOpen(false)
+      setIsActionError(true);
+      setActionMsg(
+        err instanceof Error ? err.message : "Gagal menghapus clan.",
+      );
+      setDeleteDialogOpen(false);
     } finally {
-      setActionLoading(false)
+      setActionLoading(false);
     }
   }
 
   async function handleApprove(requestId: number) {
-    setActionLoading(true)
+    setActionLoading(true);
     try {
-      await approveJoinRequest(requestId)
-      await load()
-      setIsActionError(false)
-      setActionMsg("Permintaan disetujui.")
+      await approveJoinRequest(requestId);
+      await load();
+      setIsActionError(false);
+      setActionMsg("Permintaan disetujui.");
     } catch (err) {
-      setIsActionError(true)
-      setActionMsg(err instanceof Error ? err.message : "Gagal menyetujui permintaan.")
+      setIsActionError(true);
+      setActionMsg(
+        err instanceof Error ? err.message : "Gagal menyetujui permintaan.",
+      );
     } finally {
-      setActionLoading(false)
+      setActionLoading(false);
     }
   }
 
   async function handleReject(requestId: number) {
-    setActionLoading(true)
+    setActionLoading(true);
     try {
-      await rejectJoinRequest(requestId)
-      setJoinRequests((prev) => prev.filter((r) => r.id !== requestId))
-      setIsActionError(false)
-      setActionMsg("Permintaan ditolak.")
+      await rejectJoinRequest(requestId);
+      setJoinRequests((prev) => prev.filter((r) => r.id !== requestId));
+      setIsActionError(false);
+      setActionMsg("Permintaan ditolak.");
     } catch (err) {
-      setIsActionError(true)
-      setActionMsg(err instanceof Error ? err.message : "Gagal menolak permintaan.")
+      setIsActionError(true);
+      setActionMsg(
+        err instanceof Error ? err.message : "Gagal menolak permintaan.",
+      );
     } finally {
-      setActionLoading(false)
+      setActionLoading(false);
     }
   }
 
-  if (isLoading || !username) return null
+  if (isLoading || !username) return null;
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
@@ -226,7 +250,9 @@ export default function ClanDetailPage({
           )}
 
           {actionMsg && (
-            <p className={`text-sm font-medium text-center mb-4 ${isActionError ? "text-red-500" : "text-blue-600"}`}>
+            <p
+              className={`text-sm font-medium text-center mb-4 ${isActionError ? "text-red-500" : "text-blue-600"}`}
+            >
               {actionMsg}
             </p>
           )}
@@ -248,7 +274,8 @@ export default function ClanDetailPage({
                       <CardTitle className="text-xl">{clan.name}</CardTitle>
                       <span
                         className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
-                          DIVISION_COLORS[clan.division] ?? "bg-gray-100 text-gray-600"
+                          DIVISION_COLORS[clan.division] ??
+                          "bg-gray-100 text-gray-600"
                         }`}
                       >
                         {clan.division}
@@ -312,7 +339,9 @@ export default function ClanDetailPage({
             {isLeader && joinRequests.length > 0 && (
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-base">Permintaan Bergabung</CardTitle>
+                  <CardTitle className="text-base">
+                    Permintaan Bergabung
+                  </CardTitle>
                   <CardDescription>
                     {joinRequests.length} permintaan menunggu persetujuanmu.
                   </CardDescription>
@@ -326,10 +355,14 @@ export default function ClanDetailPage({
                       <div className="flex items-center gap-3">
                         <Avatar className="size-8">
                           <AvatarFallback className="text-xs">
-                            {(memberNames[req.userId] ?? req.userId).slice(0, 2).toUpperCase()}
+                            {(memberNames[req.userId] ?? req.userId)
+                              .slice(0, 2)
+                              .toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
-                        <span className="text-sm">{memberNames[req.userId] ?? req.userId.slice(0, 8)}</span>
+                        <span className="text-sm">
+                          {memberNames[req.userId] ?? req.userId.slice(0, 8)}
+                        </span>
                       </div>
                       <div className="flex gap-2">
                         <Button
@@ -361,7 +394,9 @@ export default function ClanDetailPage({
             {/* Members */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Anggota ({members.length})</CardTitle>
+                <CardTitle className="text-base">
+                  Anggota ({members.length})
+                </CardTitle>
               </CardHeader>
               <CardContent className="flex flex-col gap-2">
                 {members.length === 0 ? (
@@ -377,24 +412,36 @@ export default function ClanDetailPage({
                       <div className="flex items-center gap-3">
                         <Avatar className="size-8">
                           <AvatarFallback className="text-xs">
-                            {(memberNames[member.userId] ?? member.userId).slice(0, 2).toUpperCase()}
+                            {(memberNames[member.userId] ?? member.userId)
+                              .slice(0, 2)
+                              .toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
                         <div>
-                          <Link href={`/users/${member.userId}`} className="text-sm font-medium hover:underline">
-                            {memberNames[member.userId] ?? member.userId.slice(0, 8)}
+                          <Link
+                            href={`/users/${member.userId}`}
+                            className="text-sm font-medium hover:underline"
+                          >
+                            {memberNames[member.userId] ??
+                              member.userId.slice(0, 8)}
                             {member.userId === userId && (
-                              <span className="ml-1 text-xs text-muted-foreground">(Kamu)</span>
+                              <span className="ml-1 text-xs text-muted-foreground">
+                                (Kamu)
+                              </span>
                             )}
                           </Link>
                         </div>
                       </div>
                       <span
                         className={`text-xs font-medium flex items-center gap-1 ${
-                          member.role === "LEADER" ? "text-amber-600" : "text-muted-foreground"
+                          member.role === "LEADER"
+                            ? "text-amber-600"
+                            : "text-muted-foreground"
                         }`}
                       >
-                        {member.role === "LEADER" && <Crown className="size-3" />}
+                        {member.role === "LEADER" && (
+                          <Crown className="size-3" />
+                        )}
                         {member.role}
                       </span>
                     </div>
@@ -411,14 +458,23 @@ export default function ClanDetailPage({
             <DialogHeader>
               <DialogTitle>Keluar dari Clan</DialogTitle>
               <DialogDescription>
-                Apakah kamu yakin ingin keluar dari clan ini? Kamu bisa bergabung kembali nanti.
+                Apakah kamu yakin ingin keluar dari clan ini? Kamu bisa
+                bergabung kembali nanti.
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setLeaveDialogOpen(false)} disabled={actionLoading}>
+              <Button
+                variant="outline"
+                onClick={() => setLeaveDialogOpen(false)}
+                disabled={actionLoading}
+              >
                 Batal
               </Button>
-              <Button variant="destructive" onClick={handleLeave} disabled={actionLoading}>
+              <Button
+                variant="destructive"
+                onClick={handleLeave}
+                disabled={actionLoading}
+              >
                 {actionLoading ? "Memproses..." : "Keluar"}
               </Button>
             </DialogFooter>
@@ -431,14 +487,23 @@ export default function ClanDetailPage({
             <DialogHeader>
               <DialogTitle>Hapus Clan</DialogTitle>
               <DialogDescription>
-                Apakah kamu yakin ingin menghapus clan ini? Tindakan ini tidak bisa dibatalkan dan semua anggota akan dikeluarkan.
+                Apakah kamu yakin ingin menghapus clan ini? Tindakan ini tidak
+                bisa dibatalkan dan semua anggota akan dikeluarkan.
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setDeleteDialogOpen(false)} disabled={actionLoading}>
+              <Button
+                variant="outline"
+                onClick={() => setDeleteDialogOpen(false)}
+                disabled={actionLoading}
+              >
                 Batal
               </Button>
-              <Button variant="destructive" onClick={handleDelete} disabled={actionLoading}>
+              <Button
+                variant="destructive"
+                onClick={handleDelete}
+                disabled={actionLoading}
+              >
                 {actionLoading ? "Menghapus..." : "Hapus"}
               </Button>
             </DialogFooter>
@@ -446,5 +511,5 @@ export default function ClanDetailPage({
         </Dialog>
       </main>
     </div>
-  )
+  );
 }

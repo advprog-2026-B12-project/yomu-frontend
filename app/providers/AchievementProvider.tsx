@@ -69,7 +69,9 @@ export function AchievementProvider({
   // Manage queue display
   React.useEffect(() => {
     if (queue.length > 0 && !isShowing) {
-      setIsShowing(true);
+      queueMicrotask(() => {
+        setIsShowing(true);
+      });
     }
   }, [queue, isShowing]);
 

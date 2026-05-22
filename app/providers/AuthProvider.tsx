@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
@@ -30,27 +30,13 @@ function clearStorage() {
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const router = useRouter()
-  const [userId, setUserId] = useState("")
-  const [username, setUsername] = useState("")
-  const [displayName, setDisplayName] = useState("")
-  const [role, setRole] = useState("")
-  const [isLoading, setIsLoading] = useState(true)
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  const scheduleAutoLogout = useCallback((token: string) => {
-    try {
-      const payloadBase64 = token.split(".")[1]
-      if (!payloadBase64) return
-      const { exp } = JSON.parse(atob(payloadBase64))
-      if (!exp) return
-      const msUntilExpiry = exp * 1000 - Date.now()
-      if (msUntilExpiry <= 0) return
-      if (timerRef.current) clearTimeout(timerRef.current)
-      timerRef.current = setTimeout(() => logout(), msUntilExpiry)
-    } catch {}
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  const router = useRouter();
+  const [userId, setUserId] = useState("");
+  const [username, setUsername] = useState("");
+  const [displayName, setDisplayName] = useState("");
+  const [role, setRole] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const logout = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current)
@@ -62,60 +48,88 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     router.push("/")
   }, [router])
 
-  const login = useCallback((token: string, user: UserInfo) => {
-    if (!user.username) throw new Error("login() called with missing username")
-    localStorage.setItem("token", token)
-    localStorage.setItem("userId", user.userId)
-    localStorage.setItem("username", user.username)
-    localStorage.setItem("displayName", user.displayName)
-    localStorage.setItem("role", user.role ?? "")
-    setUserId(user.userId)
-    setUsername(user.username)
-    setDisplayName(user.displayName)
-    setRole(user.role ?? "")
-    scheduleAutoLogout(token)
-  }, [scheduleAutoLogout])
+  const scheduleAutoLogout = useCallback(
+    (token: string) => {
+      try {
+        const payloadBase64 = token.split(".")[1];
+        if (!payloadBase64) return;
+        const { exp } = JSON.parse(atob(payloadBase64));
+        if (!exp) return;
+        const msUntilExpiry = exp * 1000 - Date.now();
+        if (msUntilExpiry <= 0) return;
+        if (timerRef.current) clearTimeout(timerRef.current);
+        timerRef.current = setTimeout(() => logout(), msUntilExpiry);
+      } catch {}
+    },
+    [logout],
+  );
+
+  const login = useCallback(
+    (token: string, user: UserInfo) => {
+      if (!user.username)
+        throw new Error("login() called with missing username");
+      localStorage.setItem("token", token);
+      localStorage.setItem("userId", user.userId);
+      localStorage.setItem("username", user.username);
+      localStorage.setItem("displayName", user.displayName);
+      localStorage.setItem("role", user.role ?? "");
+      setUserId(user.userId);
+      setUsername(user.username);
+      setDisplayName(user.displayName);
+      setRole(user.role ?? "");
+      scheduleAutoLogout(token);
+    },
+    [scheduleAutoLogout],
+  );
 
   useEffect(() => {
-    const token = localStorage.getItem("token")
-    const storedUserId = localStorage.getItem("userId") ?? ""
-    const storedUsername = localStorage.getItem("username") ?? ""
-    const storedDisplayName = localStorage.getItem("displayName") ?? ""
-    const storedRole = localStorage.getItem("role") ?? ""
+    const token = localStorage.getItem("token");
+    const storedUserId = localStorage.getItem("userId") ?? "";
+    const storedUsername = localStorage.getItem("username") ?? "";
+    const storedDisplayName = localStorage.getItem("displayName") ?? "";
+    const storedRole = localStorage.getItem("role") ?? "";
 
     if (!token || !storedUsername) {
-      setIsLoading(false)
-      return
+      queueMicrotask(() => {
+        setIsLoading(false);
+      });
+      return;
     }
 
     try {
-      const payloadBase64 = token.split(".")[1]
-      if (!payloadBase64) throw new Error("Malformed token")
-      const { exp } = JSON.parse(atob(payloadBase64))
-      const nowSeconds = Math.floor(Date.now() / 1000)
+      const payloadBase64 = token.split(".")[1];
+      if (!payloadBase64) throw new Error("Malformed token");
+      const { exp } = JSON.parse(atob(payloadBase64));
+      const nowSeconds = Math.floor(Date.now() / 1000);
 
       if (exp && exp < nowSeconds) {
-        clearStorage()
-        setIsLoading(false)
-        return
+        clearStorage();
+        queueMicrotask(() => {
+          setIsLoading(false);
+        });
+        return;
       }
 
-      setUserId(storedUserId)
-      setUsername(storedUsername)
-      setDisplayName(storedDisplayName)
-      setRole(storedRole)
-      scheduleAutoLogout(token)
+      queueMicrotask(() => {
+        setUserId(storedUserId);
+        setUsername(storedUsername);
+        setDisplayName(storedDisplayName);
+        setRole(storedRole);
+      });
+      scheduleAutoLogout(token);
     } catch {
-      clearStorage()
+      clearStorage();
     }
 
-    setIsLoading(false)
+    queueMicrotask(() => {
+      setIsLoading(false);
+    });
 
     return () => {
-      if (timerRef.current) clearTimeout(timerRef.current)
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <GoogleOAuthProvider clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? ""}>

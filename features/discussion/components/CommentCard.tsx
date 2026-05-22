@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import Link from "next/link";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -13,9 +14,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { fetchUserProfile } from "@/features/users/api";
 import { Comment, ReactionType } from "../types";
 import { formatAbsoluteTime, formatRelativeTime } from "../utils";
 import { ReplyForm } from "./ReplyForm";
+
+const usernameCache = new Map<string, string>();
 
 interface CommentCardProps {
   comment: Comment;
@@ -31,30 +35,30 @@ interface CommentCardProps {
   ) => Promise<void>;
 }
 
-const MAX_INDENT_DEPTH = 5;
+const MAX_INDENT_DEPTH = 2;
 
 const REACTION_MAP: Record<ReactionType, string> = {
-  UPVOTE: "👍",
-  DOWNVOTE: "👎",
+  UPVOTE: "⬆️",
+  DOWNVOTE: "⬇️",
   FIRE: "🔥",
+  ROCKET: "🚀",
+  LAUGH: "😂",
+  PARTY: "🎉",
   THINKING: "🤔",
-  CLAP: "👏",
-  SURPRISED: "😮",
-  LOVE: "❤️",
 };
 
 const REACTION_TYPES: ReactionType[] = [
   "UPVOTE",
   "DOWNVOTE",
   "FIRE",
+  "ROCKET",
+  "LAUGH",
+  "PARTY",
   "THINKING",
-  "CLAP",
-  "SURPRISED",
-  "LOVE",
 ];
 
-function getAvatarFallback(authorId: string): string {
-  return authorId.slice(0, 2).toUpperCase();
+function getAvatarFallback(label: string): string {
+  return label.slice(0, 2).toUpperCase();
 }
 
 function shortId(authorId: string): string {
@@ -78,7 +82,29 @@ export function CommentCard({
   const [editError, setEditError] = useState<string | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [authorUsername, setAuthorUsername] = useState<string | null>(null);
 
+  useEffect(() => {
+    const cached = usernameCache.get(comment.authorId);
+    if (cached) {
+      queueMicrotask(() => {
+        setAuthorUsername(cached);
+      });
+      return;
+    }
+    fetchUserProfile(comment.authorId)
+      .then((profile) => {
+        usernameCache.set(comment.authorId, profile.username);
+        setAuthorUsername(profile.username);
+      })
+      .catch(() => {
+        const fallback = shortId(comment.authorId);
+        usernameCache.set(comment.authorId, fallback);
+        setAuthorUsername(fallback);
+      });
+  }, [comment.authorId]);
+
+  const displayName = authorUsername ?? shortId(comment.authorId);
   const isOwn = Boolean(currentUserId) && comment.authorId === currentUserId;
   const indentDepth = Math.min(depth, MAX_INDENT_DEPTH);
 
@@ -146,20 +172,21 @@ export function CommentCard({
       <Card>
         <CardContent className="flex gap-4 pt-6">
           <Avatar>
-            <AvatarFallback>
-              {getAvatarFallback(comment.authorId)}
-            </AvatarFallback>
+            <AvatarFallback>{getAvatarFallback(displayName)}</AvatarFallback>
           </Avatar>
           <div className="flex flex-col gap-2 flex-1 min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="font-semibold text-sm font-mono">
-                {shortId(comment.authorId)}
+              <Link
+                href={`/users/${comment.authorId}`}
+                className="font-semibold text-sm hover:underline"
+              >
+                {displayName}
                 {isOwn && (
                   <span className="ml-1 text-xs text-muted-foreground">
                     (Kamu)
                   </span>
                 )}
-              </span>
+              </Link>
               <span
                 className="text-xs text-muted-foreground"
                 title={formatAbsoluteTime(comment.createdAt)}
@@ -182,7 +209,6 @@ export function CommentCard({
                   value={editValue}
                   onChange={(e) => setEditValue(e.target.value)}
                   rows={3}
-                  aria-label="Edit komentar"
                   disabled={submitting}
                 />
                 {editError && (
@@ -219,15 +245,16 @@ export function CommentCard({
             )}
 
             <div className="flex flex-wrap items-center gap-1 pt-1">
-              <Button
-                type="button"
-                size="xs"
-                variant="ghost"
-                onClick={() => setReplying((v) => !v)}
-                aria-label={`Balas komentar ${shortId(comment.authorId)}`}
-              >
-                {replying ? "Tutup" : "Balas"}
-              </Button>
+              {depth < MAX_INDENT_DEPTH && (
+                <Button
+                  type="button"
+                  size="xs"
+                  variant="ghost"
+                  onClick={() => setReplying((v) => !v)}
+                >
+                  {replying ? "Tutup" : "Balas"}
+                </Button>
+              )}
               {isOwn && !editing && (
                 <>
                   <Button
@@ -274,12 +301,6 @@ export function CommentCard({
                     variant={active ? "secondary" : "ghost"}
                     className="gap-1"
                     onClick={() => handleReactionClick(type)}
-                    aria-label={
-                      active
-                        ? `Batalkan reaksi ${REACTION_MAP[type]}`
-                        : `Beri reaksi ${REACTION_MAP[type]}`
-                    }
-                    aria-pressed={active}
                     title={type}
                   >
                     <span>{REACTION_MAP[type]}</span>
@@ -324,7 +345,7 @@ export function CommentCard({
         </DialogContent>
       </Dialog>
 
-      {replying && (
+      {replying && depth < MAX_INDENT_DEPTH && (
         <div className="pl-4">
           <ReplyForm
             submitting={submitting}
