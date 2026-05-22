@@ -141,7 +141,20 @@ export function CommentList({ readingId }: CommentListProps) {
 
   const handleDelete = useCallback(
     async (commentId: string) => {
-      const target = comments.find((c) => c.id === commentId);
+      let target: Comment | undefined;
+      const findComment = (list: Comment[]) => {
+        for (const c of list) {
+          if (c.id === commentId) {
+            target = c;
+            return;
+          }
+          if (c.replies?.length > 0) {
+            findComment(c.replies);
+          }
+        }
+      };
+      findComment(comments);
+
       const isOwn = target?.authorId === userId;
       if (isOwn) {
         await withAuth(() => deleteComment(readingId, commentId));
@@ -191,10 +204,6 @@ export function CommentList({ readingId }: CommentListProps) {
     [withAuth],
   );
 
-  const handleSortChange = (next: SortOption) => {
-    setSort(next);
-  };
-
   return (
     <div className="flex flex-col gap-6">
       <section className="flex flex-col gap-2">
@@ -212,26 +221,6 @@ export function CommentList({ readingId }: CommentListProps) {
           </div>
         )}
       </section>
-
-      <div className="flex items-center gap-2">
-        <span className="text-sm text-muted-foreground">Urutkan:</span>
-        <Button
-          type="button"
-          size="xs"
-          variant={sort === "newest" ? "secondary" : "ghost"}
-          onClick={() => handleSortChange("newest")}
-        >
-          Terbaru
-        </Button>
-        <Button
-          type="button"
-          size="xs"
-          variant={sort === "most_upvoted" ? "secondary" : "ghost"}
-          onClick={() => handleSortChange("most_upvoted")}
-        >
-          Most Upvoted
-        </Button>
-      </div>
 
       <section className="flex flex-col gap-4">
         {loading && comments.length === 0 ? (
