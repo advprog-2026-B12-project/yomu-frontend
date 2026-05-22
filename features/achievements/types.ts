@@ -82,7 +82,10 @@ export interface DailyMissionRequest {
 export interface UserDailyMission {
   id: string
   userId: string
-  dailyMission: DailyMission
+  missionId: string
+  missionName: string
+  missionDescription: string
+  milestone: number
   dateAssigned: string
   currentProgress: number
   isCompleted: boolean

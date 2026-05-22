@@ -75,7 +75,7 @@ export default function AchievementsPage() {
         const todayStr = new Date().toISOString().slice(0, 10);
         const merged = activeMissions.map((mission) => {
           const progress = userMissions.find((um) => {
-            if (um.dailyMission.id !== mission.id) return false;
+            if (um.missionId !== mission.id) return false;
             const assignedStr = Array.isArray(um.dateAssigned)
               ? `${um.dateAssigned[0]}-${String(um.dateAssigned[1]).padStart(2, "0")}-${String(um.dateAssigned[2]).padStart(2, "0")}`
               : String(um.dateAssigned);
