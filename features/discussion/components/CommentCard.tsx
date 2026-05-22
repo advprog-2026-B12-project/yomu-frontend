@@ -207,7 +207,6 @@ export function CommentCard({
                   value={editValue}
                   onChange={(e) => setEditValue(e.target.value)}
                   rows={3}
-                  aria-label="Edit komentar"
                   disabled={submitting}
                 />
                 {editError && (
@@ -249,7 +248,6 @@ export function CommentCard({
                 size="xs"
                 variant="ghost"
                 onClick={() => setReplying((v) => !v)}
-                aria-label={`Balas komentar ${displayName}`}
               >
                 {replying ? "Tutup" : "Balas"}
               </Button>
@@ -299,12 +297,6 @@ export function CommentCard({
                     variant={active ? "secondary" : "ghost"}
                     className="gap-1"
                     onClick={() => handleReactionClick(type)}
-                    aria-label={
-                      active
-                        ? `Batalkan reaksi ${REACTION_MAP[type]}`
-                        : `Beri reaksi ${REACTION_MAP[type]}`
-                    }
-                    aria-pressed={active}
                     title={type}
                   >
                     <span>{REACTION_MAP[type]}</span>
