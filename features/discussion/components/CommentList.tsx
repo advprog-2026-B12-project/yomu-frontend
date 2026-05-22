@@ -65,14 +65,11 @@ export function CommentList({ readingId }: CommentListProps) {
 
   const loadComments = useCallback(
     async (targetPage = 0, append = false) => {
+      if (!readingId) return;
       setLoading(true);
       setError(null);
       try {
-        const data = await fetchComments(
-          readingId,
-          targetPage,
-          PAGE_SIZE
-        );
+        const data = await fetchComments(readingId, targetPage, PAGE_SIZE);
         setComments((prev) => (append ? [...prev, ...data] : data));
         setHasMore(data.length === PAGE_SIZE);
         setPage(targetPage);
