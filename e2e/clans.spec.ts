@@ -51,6 +51,13 @@ async function loginViaUi(
   await expect(page).toHaveURL(/\/dashboard|\/admin-dashboard/)
 }
 
+function clanLeaveButton(page: import("@playwright/test").Page) {
+  return page.locator("main").getByRole("button", { name: /^Keluar$/i })
+}
+
+// ---------------------------------------------------------------------------
+// Auth guard — semua route clans harus redirect jika belum login
+// ---------------------------------------------------------------------------
 test.describe("Clans pages - auth guard", () => {
   test("/clans redirect ke beranda jika belum login", async ({ page }) => {
     await page.goto("/clans")
@@ -73,8 +80,13 @@ test.describe("Clans pages - auth guard", () => {
   })
 })
 
+// ---------------------------------------------------------------------------
+// Frontend-backend flow — serial, membutuhkan NEXT_PUBLIC_API_URL
+// ---------------------------------------------------------------------------
 test.describe.serial("Clans frontend-backend flow", () => {
   test.skip(!apiURL, "NEXT_PUBLIC_API_URL is required for Clans integration E2E")
+
+  // --- Setup users ---
 
   test("register leader user untuk pengujian clan", async ({ page }) => {
     await registerViaUi(page, leaderUser)
@@ -84,24 +96,29 @@ test.describe.serial("Clans frontend-backend flow", () => {
     await registerViaUi(page, memberUser)
   })
 
+  // --- Halaman daftar clan (/clans) ---
+
   test("halaman /clans tampil dengan benar setelah login", async ({ page }) => {
     await loginViaUi(page, leaderUser)
     await page.goto("/clans")
 
     await expect(page).toHaveURL(/\/clans$/)
     await expect(page.locator("h1").filter({ hasText: "Clans" })).toBeVisible()
-    await expect(page.getByText(/Bergabunglah dengan clan/i)).toBeVisible()
+    await expect(page.getByText(/Bergabunglah dengan clan/i).first()).toBeVisible()
     await expect(page.getByRole("link", { name: /Buat Clan/i })).toBeVisible()
     await expect(page.getByRole("link", { name: /Leaderboard/i })).toBeVisible()
   })
+
+  // --- Halaman create clan (/clans/create) ---
 
   test("halaman /clans/create tampil dengan form yang benar", async ({ page }) => {
     await loginViaUi(page, leaderUser)
     await page.goto("/clans/create")
 
     await expect(page).toHaveURL(/\/clans\/create/)
-    await expect(page.getByRole("heading", { name: "Buat Clan" })).toBeVisible()
-    await expect(page.getByText(/Kamu akan menjadi pemimpin/i)).toBeVisible()
+    // CardTitle bukan heading element, pakai getByText
+    await expect(page.getByText("Buat Clan").first()).toBeVisible()
+    await expect(page.getByText(/Kamu akan menjadi pemimpin/i).first()).toBeVisible()
     await expect(page.getByLabel("Nama Clan")).toBeVisible()
     await expect(page.getByLabel("Deskripsi")).toBeVisible()
     await expect(page.getByRole("button", { name: "Buat Clan" })).toBeVisible()
@@ -122,6 +139,7 @@ test.describe.serial("Clans frontend-backend flow", () => {
 
     await page.getByRole("button", { name: "Buat Clan" }).click()
 
+    // Input punya required, HTML5 validation mencegah submit
     await expect(page).toHaveURL(/\/clans\/create/)
   })
 
@@ -146,13 +164,15 @@ test.describe.serial("Clans frontend-backend flow", () => {
     await expect(page).toHaveURL(/\/clans$/)
   })
 
+  // --- Daftar clan setelah clan dibuat ---
+
   test("clan baru muncul di daftar clan dengan info lengkap", async ({ page }) => {
     await loginViaUi(page, leaderUser)
     await page.goto("/clans")
 
-    await expect(page.getByText(testClanName)).toBeVisible()
-    await expect(page.getByText(testClanDescription)).toBeVisible()
-    await expect(page.getByText(/BRONZE/i).first()).toBeVisible()
+    await expect(page.getByText(testClanName).first()).toBeVisible()
+    await expect(page.getByText(testClanDescription).first()).toBeVisible()
+    await expect(page.getByText(/BRONZE/).first()).toBeVisible()
     await expect(page.getByRole("link", { name: /Lihat Detail/i }).first()).toBeVisible()
   })
 
@@ -165,17 +185,22 @@ test.describe.serial("Clans frontend-backend flow", () => {
     await expect(page).toHaveURL(/\/clans\/\d+/)
   })
 
+  // --- Detail clan sebagai leader ---
+
   test("halaman detail clan tampil benar sebagai leader", async ({ page }) => {
     if (!createdClanId) throw new Error("createdClanId belum tersedia")
     await loginViaUi(page, leaderUser)
     await page.goto(`/clans/${createdClanId}`)
 
-    await expect(page.getByRole("heading", { name: testClanName })).toBeVisible()
-    await expect(page.getByText(/BRONZE/i).first()).toBeVisible()
-    await expect(page.getByText(testClanDescription)).toBeVisible()
+    // Nama clan di CardTitle (div, bukan heading)
+    await expect(page.getByText(testClanName).first()).toBeVisible()
+    await expect(page.getByText(/BRONZE/).first()).toBeVisible()
+    await expect(page.getByText(testClanDescription).first()).toBeVisible()
     await expect(page.getByRole("button", { name: /Hapus Clan/i })).toBeVisible()
-    await expect(page.getByText(/Anggota/i)).toBeVisible()
-    await expect(page.getByText(/LEADER/i)).toBeVisible()
+    // CardTitle "Anggota (N)" — pakai pola spesifik agar tidak bentrok dengan "N anggota"
+    await expect(page.getByText(/Anggota \(\d+\)/).first()).toBeVisible()
+    // Role badge teks "LEADER"
+    await expect(page.getByText("LEADER").first()).toBeVisible()
   })
 
   test("tombol Request Join dan Keluar tidak tampil untuk leader clan sendiri", async ({ page }) => {
@@ -184,8 +209,10 @@ test.describe.serial("Clans frontend-backend flow", () => {
     await page.goto(`/clans/${createdClanId}`)
 
     await expect(page.getByRole("button", { name: /Request Join/i })).not.toBeVisible()
-    await expect(page.getByRole("button", { name: /^Keluar$/i })).not.toBeVisible()
+    await expect(clanLeaveButton(page)).not.toBeVisible()
   })
+
+  // --- Detail clan sebagai non-anggota (memberUser) ---
 
   test("tombol Request Join tampil untuk user non-anggota", async ({ page }) => {
     if (!createdClanId) throw new Error("createdClanId belum tersedia")
@@ -194,7 +221,7 @@ test.describe.serial("Clans frontend-backend flow", () => {
 
     await expect(page.getByRole("button", { name: /Request Join/i })).toBeVisible()
     await expect(page.getByRole("button", { name: /Hapus Clan/i })).not.toBeVisible()
-    await expect(page.getByRole("button", { name: /^Keluar$/i })).not.toBeVisible()
+    await expect(clanLeaveButton(page)).not.toBeVisible()
   })
 
   test("user non-anggota berhasil mengirim request join", async ({ page }) => {
@@ -204,15 +231,18 @@ test.describe.serial("Clans frontend-backend flow", () => {
 
     await page.getByRole("button", { name: /Request Join/i }).click()
 
-    await expect(page.getByText(/Permintaan bergabung berhasil/i)).toBeVisible()
+    // Pesan sukses dari handleJoin(): "Permintaan bergabung terkirim! Tunggu persetujuan leader."
+    await expect(page.getByText(/Permintaan bergabung terkirim/i)).toBeVisible()
   })
+
+  // --- Leader mengelola join request ---
 
   test("leader melihat permintaan bergabung yang pending di halaman detail", async ({ page }) => {
     if (!createdClanId) throw new Error("createdClanId belum tersedia")
     await loginViaUi(page, leaderUser)
     await page.goto(`/clans/${createdClanId}`)
 
-    await expect(page.getByText(/Permintaan Bergabung/i)).toBeVisible()
+    await expect(page.getByText(/Permintaan Bergabung/i).first()).toBeVisible()
     await expect(page.getByRole("button", { name: /Setujui/i })).toBeVisible()
     await expect(page.getByRole("button", { name: /Tolak/i })).toBeVisible()
   })
@@ -224,6 +254,7 @@ test.describe.serial("Clans frontend-backend flow", () => {
 
     await page.getByRole("button", { name: /Tolak/i }).first().click()
 
+    // Setelah ditolak, section join request menghilang
     await expect(page.getByRole("button", { name: /Setujui/i })).not.toBeVisible({ timeout: 5000 })
   })
 
@@ -235,7 +266,7 @@ test.describe.serial("Clans frontend-backend flow", () => {
     await expect(page.getByRole("button", { name: /Request Join/i })).toBeVisible()
     await page.getByRole("button", { name: /Request Join/i }).click()
 
-    await expect(page.getByText(/Permintaan bergabung berhasil/i)).toBeVisible()
+    await expect(page.getByText(/Permintaan bergabung terkirim/i)).toBeVisible()
   })
 
   test("leader berhasil menyetujui permintaan bergabung", async ({ page }) => {
@@ -245,6 +276,7 @@ test.describe.serial("Clans frontend-backend flow", () => {
 
     await page.getByRole("button", { name: /Setujui/i }).first().click()
 
+    // Setelah disetujui, section join request menghilang
     await expect(page.getByRole("button", { name: /Setujui/i })).not.toBeVisible({ timeout: 5000 })
   })
 
@@ -253,30 +285,34 @@ test.describe.serial("Clans frontend-backend flow", () => {
     await loginViaUi(page, leaderUser)
     await page.goto(`/clans/${createdClanId}`)
 
-    await expect(page.getByText(/Anggota \(2\)/i)).toBeVisible()
-    await expect(page.getByText(/MEMBER/i)).toBeVisible()
+    await expect(page.getByText(/Anggota \(2\)/).first()).toBeVisible()
+    await expect(page.getByText("MEMBER").first()).toBeVisible()
   })
+
+  // --- Detail clan sebagai member biasa ---
 
   test("halaman detail clan tampil benar untuk anggota biasa", async ({ page }) => {
     if (!createdClanId) throw new Error("createdClanId belum tersedia")
     await loginViaUi(page, memberUser)
     await page.goto(`/clans/${createdClanId}`)
 
-    await expect(page.getByRole("button", { name: /Keluar/i })).toBeVisible()
+    await expect(clanLeaveButton(page)).toBeVisible()
     await expect(page.getByRole("button", { name: /Hapus Clan/i })).not.toBeVisible()
     await expect(page.getByRole("button", { name: /Request Join/i })).not.toBeVisible()
   })
+
+  // --- Dialog keluar clan ---
 
   test("dialog konfirmasi keluar clan muncul dengan konten yang benar", async ({ page }) => {
     if (!createdClanId) throw new Error("createdClanId belum tersedia")
     await loginViaUi(page, memberUser)
     await page.goto(`/clans/${createdClanId}`)
 
-    await page.getByRole("button", { name: /Keluar/i }).click()
+    await clanLeaveButton(page).click()
 
     const dialog = page.getByRole("dialog")
     await expect(dialog).toBeVisible()
-    await expect(dialog.getByText(/Keluar dari Clan/i)).toBeVisible()
+    await expect(dialog.getByRole("heading", { name: "Keluar dari Clan" })).toBeVisible()
     await expect(dialog.getByText(/Apakah kamu yakin ingin keluar/i)).toBeVisible()
     await expect(dialog.getByRole("button", { name: /Batal/i })).toBeVisible()
     await expect(dialog.getByRole("button", { name: /Keluar/i })).toBeVisible()
@@ -287,7 +323,7 @@ test.describe.serial("Clans frontend-backend flow", () => {
     await loginViaUi(page, memberUser)
     await page.goto(`/clans/${createdClanId}`)
 
-    await page.getByRole("button", { name: /Keluar/i }).click()
+    await clanLeaveButton(page).click()
     await expect(page.getByRole("dialog")).toBeVisible()
 
     await page.getByRole("dialog").getByRole("button", { name: /Batal/i }).click()
@@ -301,20 +337,24 @@ test.describe.serial("Clans frontend-backend flow", () => {
     await loginViaUi(page, memberUser)
     await page.goto(`/clans/${createdClanId}`)
 
-    await page.getByRole("button", { name: /Keluar/i }).click()
+    await clanLeaveButton(page).click()
     await expect(page.getByRole("dialog")).toBeVisible()
+    // Scoped ke dialog supaya tidak ambigu dengan trigger button
     await page.getByRole("dialog").getByRole("button", { name: /Keluar/i }).click()
 
     await expect(page).toHaveURL(/\/clans$/)
   })
+
+  // --- Leaderboard ---
 
   test("halaman leaderboard tampil dengan semua tab divisi", async ({ page }) => {
     await loginViaUi(page, leaderUser)
     await page.goto("/clans/leaderboard")
 
     await expect(page).toHaveURL(/\/clans\/leaderboard/)
+    // <h1> asli, bukan CardTitle
     await expect(page.getByRole("heading", { name: /Leaderboard Liga/i })).toBeVisible()
-    await expect(page.getByText(/Peringkat clan berdasarkan divisi/i)).toBeVisible()
+    await expect(page.getByText(/Peringkat clan berdasarkan divisi/i).first()).toBeVisible()
     await expect(page.getByRole("button", { name: "Divisi Saya" })).toBeVisible()
     await expect(page.getByRole("button", { name: "BRONZE" })).toBeVisible()
     await expect(page.getByRole("button", { name: "SILVER" })).toBeVisible()
@@ -339,7 +379,8 @@ test.describe.serial("Clans frontend-backend flow", () => {
     await page.getByRole("button", { name: "BRONZE" }).click()
 
     await expect(page.getByRole("button", { name: "BRONZE" })).toHaveAttribute("data-active", "true")
-    await expect(page.getByText(/Divisi BRONZE/i)).toBeVisible()
+    // CardTitle berubah jadi "Divisi BRONZE"
+    await expect(page.getByText(/Divisi BRONZE/).first()).toBeVisible()
   })
 
   test("tab leaderboard SILVER bisa dipilih dan konten berubah", async ({ page }) => {
@@ -349,7 +390,7 @@ test.describe.serial("Clans frontend-backend flow", () => {
     await page.getByRole("button", { name: "SILVER" }).click()
 
     await expect(page.getByRole("button", { name: "SILVER" })).toHaveAttribute("data-active", "true")
-    await expect(page.getByText(/Divisi SILVER/i)).toBeVisible()
+    await expect(page.getByText(/Divisi SILVER/).first()).toBeVisible()
   })
 
   test("tab leaderboard GOLD bisa dipilih dan konten berubah", async ({ page }) => {
@@ -359,7 +400,7 @@ test.describe.serial("Clans frontend-backend flow", () => {
     await page.getByRole("button", { name: "GOLD" }).click()
 
     await expect(page.getByRole("button", { name: "GOLD" })).toHaveAttribute("data-active", "true")
-    await expect(page.getByText(/Divisi GOLD/i)).toBeVisible()
+    await expect(page.getByText(/Divisi GOLD/).first()).toBeVisible()
   })
 
   test("tab leaderboard DIAMOND bisa dipilih dan konten berubah", async ({ page }) => {
@@ -369,7 +410,7 @@ test.describe.serial("Clans frontend-backend flow", () => {
     await page.getByRole("button", { name: "DIAMOND" }).click()
 
     await expect(page.getByRole("button", { name: "DIAMOND" })).toHaveAttribute("data-active", "true")
-    await expect(page.getByText(/Divisi DIAMOND/i)).toBeVisible()
+    await expect(page.getByText(/Divisi DIAMOND/).first()).toBeVisible()
   })
 
   test("tombol kembali di leaderboard mengarah ke /clans", async ({ page }) => {
@@ -381,6 +422,8 @@ test.describe.serial("Clans frontend-backend flow", () => {
     await expect(page).toHaveURL(/\/clans$/)
   })
 
+  // --- Dialog hapus clan ---
+
   test("dialog konfirmasi hapus clan muncul dengan konten yang benar", async ({ page }) => {
     if (!createdClanId) throw new Error("createdClanId belum tersedia")
     await loginViaUi(page, leaderUser)
@@ -390,7 +433,7 @@ test.describe.serial("Clans frontend-backend flow", () => {
 
     const dialog = page.getByRole("dialog")
     await expect(dialog).toBeVisible()
-    await expect(dialog.getByText(/Hapus Clan/i)).toBeVisible()
+    await expect(dialog.getByRole("heading", { name: "Hapus Clan" })).toBeVisible()
     await expect(dialog.getByText(/Apakah kamu yakin ingin menghapus/i)).toBeVisible()
     await expect(dialog.getByText(/tidak bisa dibatalkan/i)).toBeVisible()
     await expect(dialog.getByRole("button", { name: /Batal/i })).toBeVisible()
