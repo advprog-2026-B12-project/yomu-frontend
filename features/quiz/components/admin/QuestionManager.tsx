@@ -32,9 +32,11 @@ export function QuestionManager({ readingId }: QuestionManagerProps) {
             .finally(() => setLoading(false));
     }, [readingId]);
 
+    /* eslint-disable react-hooks/set-state-in-effect */
     useEffect(() => {
         loadQuestions();
     }, [loadQuestions]);
+    /* eslint-enable react-hooks/set-state-in-effect */
 
     const toggleExpand = (id: string) => {
         setExpanded((prev) => {

@@ -33,9 +33,11 @@ export function OptionManager({ questionId }: OptionManagerProps) {
             .finally(() => setLoading(false));
     }, [questionId]);
 
+    /* eslint-disable react-hooks/set-state-in-effect */
     useEffect(() => {
         load();
     }, [load]);
+    /* eslint-enable react-hooks/set-state-in-effect */
 
     const handleAdd = async () => {
         if (!optionText.trim()) return;
