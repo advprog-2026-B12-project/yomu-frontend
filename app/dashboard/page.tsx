@@ -26,12 +26,21 @@ export default function DashboardPage() {
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
             Halo, <span className="text-blue-600">{username}</span>! 👋
           </h1>
+
+          <Button
+              className="w-full mb-3"
+              onClick={() => router.push("/readings")}
+          >
+            Lihat Readings
+          </Button>
+
           <Button
             className="w-full mb-3"
             onClick={() => router.push("/achievements")}
           >
             Lihat Achievements
           </Button>
+
           <Button
             variant="destructive"
             className="w-full"

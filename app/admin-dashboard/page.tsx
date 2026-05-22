@@ -4,6 +4,7 @@ import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/app/providers/AuthProvider"
 import { Navbar } from "@/components/Navbar"
+import {Button} from "@/components/ui/button";
 
 export default function AdminDashboardPage() {
   const router = useRouter()
@@ -30,6 +31,14 @@ export default function AdminDashboardPage() {
         <div className="bg-white p-8 rounded-xl shadow-md text-center max-w-md w-full border border-gray-100">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Admin Dashboard</h1>
           <p className="text-gray-500 mt-2">Panel manajemen admin akan ditampilkan di sini.</p>
+
+          <Button
+              className="w-full mt-5 mb-3"
+              onClick={() => router.push("/admin/readings")}
+          >
+            Atur Readings & Quiz
+          </Button>
+
         </div>
       </main>
     </div>
