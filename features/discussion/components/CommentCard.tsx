@@ -87,7 +87,9 @@ export function CommentCard({
   useEffect(() => {
     const cached = usernameCache.get(comment.authorId);
     if (cached) {
-      setAuthorUsername(cached);
+      queueMicrotask(() => {
+        setAuthorUsername(cached);
+      });
       return;
     }
     fetchUserProfile(comment.authorId)

@@ -18,7 +18,7 @@ import {
   setReaction,
   updateComment,
 } from "../api";
-import { Comment, ReactionType, SortOption } from "../types";
+import { Comment, ReactionType } from "../types";
 import { CommentCard } from "./CommentCard";
 import { CommentForm } from "./CommentForm";
 
@@ -60,7 +60,6 @@ export function CommentList({ readingId }: CommentListProps) {
   const [submitting, setSubmitting] = useState(false);
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(false);
-  const [sort, setSort] = useState<SortOption>("newest");
   const isLoggedIn = Boolean(username);
   const isAdmin = role === "ADMIN";
 
@@ -72,8 +71,7 @@ export function CommentList({ readingId }: CommentListProps) {
         const data = await fetchComments(
           readingId,
           targetPage,
-          PAGE_SIZE,
-          sort,
+          PAGE_SIZE
         );
         setComments((prev) => (append ? [...prev, ...data] : data));
         setHasMore(data.length === PAGE_SIZE);
@@ -84,11 +82,13 @@ export function CommentList({ readingId }: CommentListProps) {
         setLoading(false);
       }
     },
-    [readingId, sort],
+    [readingId],
   );
 
   useEffect(() => {
-    loadComments(0, false);
+    queueMicrotask(() => {
+      loadComments(0, false);
+    });
   }, [loadComments]);
 
   const handleUnauthorized = useCallback(() => {
@@ -185,9 +185,13 @@ export function CommentList({ readingId }: CommentListProps) {
           if (reactionType) {
             nextCounts[reactionType] = (nextCounts[reactionType] ?? 0) + 1;
           }
-          return { ...comment, myReaction: reactionType, reactionCounts: nextCounts };
+          return {
+            ...comment,
+            myReaction: reactionType,
+            reactionCounts: nextCounts,
+          };
         }
-        
+
         // Rekursif update replies
         if (comment.replies?.length > 0) {
           return {
@@ -195,7 +199,7 @@ export function CommentList({ readingId }: CommentListProps) {
             replies: comment.replies.map(updateCommentReaction),
           };
         }
-        
+
         return comment;
       };
 
@@ -268,5 +272,3 @@ export function CommentList({ readingId }: CommentListProps) {
     </div>
   );
 }
-
-

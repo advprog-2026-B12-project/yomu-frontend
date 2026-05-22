@@ -1,8 +1,7 @@
 import {
   Comment,
   CommentRequest,
-  ReactionRequest,
-  SortOption,
+  ReactionRequest
 } from "./types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
@@ -53,13 +52,11 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 export function fetchComments(
   readingId: string,
   page = 0,
-  size = 20,
-  sort: SortOption = "newest",
+  size = 20
 ): Promise<Comment[]> {
   const params = new URLSearchParams({
     page: String(page),
-    size: String(size),
-    sort,
+    size: String(size)
   });
   return request<Comment[]>(
     `/api/v1/readings/${readingId}/comments?${params.toString()}`,

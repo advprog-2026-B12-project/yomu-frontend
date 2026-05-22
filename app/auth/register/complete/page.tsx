@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
@@ -8,107 +8,112 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
-const ALPHANUMERIC = /^[a-zA-Z0-9]*$/
+const ALPHANUMERIC = /^[a-zA-Z0-9]*$/;
 
 export default function CompleteRegistrationPage() {
-  const router = useRouter()
-  const { login } = useAuth()
+  const router = useRouter();
+  const { login } = useAuth();
 
-  const [email, setEmail] = useState("")
-  const [displayName, setDisplayName] = useState("")
-  const [username, setUsername] = useState("")
-  const [password, setPassword] = useState("")
-  const [usernameError, setUsernameError] = useState("")
-  const [message, setMessage] = useState("")
-  const [isError, setIsError] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [isReady, setIsReady] = useState(false)
+  const [ssoData] = useState<{ email: string; googleName: string } | null>(
+    () => {
+      try {
+        const raw = sessionStorage.getItem("sso_pending");
+        if (!raw) return null;
+        return JSON.parse(raw) as { email: string; googleName: string };
+      } catch {
+        return null;
+      }
+    },
+  );
+
+  const email = ssoData?.email ?? "";
+  const [displayName, setDisplayName] = useState(ssoData?.googleName ?? "");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [usernameError, setUsernameError] = useState("");
+  const [message, setMessage] = useState("");
+  const [isError, setIsError] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const isReady = ssoData !== null;
 
   useEffect(() => {
-    const raw = sessionStorage.getItem("sso_pending")
-    if (!raw) {
-      router.replace("/auth/login")
-      return
+    if (!ssoData) {
+      router.replace("/auth/login");
     }
-
-    try {
-      const { email, googleName } = JSON.parse(raw) as { email: string; googleName: string }
-      setEmail(email)
-      setDisplayName(googleName)
-    } catch {
-      router.replace("/auth/login")
-      return
-    }
-
-    setIsReady(true)
-  }, [router])
+  }, [ssoData, router]);
 
   const handleUsernameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value
-    setUsername(val)
+    const val = e.target.value;
+    setUsername(val);
     setUsernameError(
       val && !ALPHANUMERIC.test(val)
         ? "Username hanya boleh mengandung huruf dan angka (tanpa spasi atau karakter khusus)."
-        : ""
-    )
-  }
+        : "",
+    );
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (usernameError) return
+    e.preventDefault();
+    if (usernameError) return;
 
-    setLoading(true)
-    setMessage("")
+    setLoading(true);
+    setMessage("");
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
 
-      const payload = { displayName, username, email, password }
+      const payload = { displayName, username, email, password };
 
       const response = await fetch(`${apiUrl}/api/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
-      })
+      });
 
       if (response.ok) {
-        sessionStorage.removeItem("sso_pending")
-        const data = await response.json().catch(() => null)
+        sessionStorage.removeItem("sso_pending");
+        const data = await response.json().catch(() => null);
         if (data?.token && data?.user?.username) {
           login(data.token, {
             userId: String(data.user.userId ?? ""),
             username: data.user.username,
             displayName: data.user.displayName ?? data.user.username,
             role: data.user.role ?? "PELAJAR",
-          })
-          router.push(data.user.role === "ADMIN" ? "/admin-dashboard" : "/dashboard")
+          });
+          router.push(
+            data.user.role === "ADMIN" ? "/admin-dashboard" : "/dashboard",
+          );
         } else {
-          setIsError(false)
-          setMessage("Akun berhasil dibuat! Mengarahkan ke halaman login...")
-          setTimeout(() => router.push("/auth/login"), 2000)
+          setIsError(false);
+          setMessage("Akun berhasil dibuat! Mengarahkan ke halaman login...");
+          setTimeout(() => router.push("/auth/login"), 2000);
         }
       } else {
-        const data = await response.json().catch(() => null)
-        setIsError(true)
+        const data = await response.json().catch(() => null);
+        setIsError(true);
         setMessage(
-          data?.message ?? "Pendaftaran gagal. Kemungkinan username/email sudah dipakai."
-        )
+          data?.message ??
+            "Pendaftaran gagal. Kemungkinan username/email sudah dipakai.",
+        );
       }
     } catch {
-      setIsError(true)
-      setMessage("API nggak nyambung atau server mati.")
+      setIsError(true);
+      setMessage("API nggak nyambung atau server mati.");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
-  if (!isReady) return null
+  if (!isReady) return null;
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4">
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle className="text-2xl font-bold text-center">Lengkapi Profil</CardTitle>
+          <CardTitle className="text-2xl font-bold text-center">
+            Lengkapi Profil
+          </CardTitle>
           <CardDescription className="text-center">
             Satu langkah lagi untuk menyelesaikan pendaftaran via Google.
           </CardDescription>
@@ -167,7 +172,9 @@ export default function CompleteRegistrationPage() {
             </div>
 
             {message && (
-              <p className={`text-sm font-medium text-center ${isError ? "text-red-500" : "text-blue-600"}`}>
+              <p
+                className={`text-sm font-medium text-center ${isError ? "text-red-500" : "text-blue-600"}`}
+              >
                 {message}
               </p>
             )}
@@ -185,5 +192,5 @@ export default function CompleteRegistrationPage() {
         </form>
       </Card>
     </div>
-  )
+  );
 }
