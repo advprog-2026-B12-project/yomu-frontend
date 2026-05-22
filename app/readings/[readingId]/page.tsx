@@ -1,3 +1,5 @@
+import {Navbar} from "@/components/Navbar";
+
 type Reading = {
     id: string
     title: string
@@ -34,29 +36,32 @@ export default async function ReadingPage({
     const reading = await getReading(readingId)
 
     return (
-        <div className="max-w-2xl mx-auto p-6 flex flex-col gap-6">
-            <h1 className="text-3xl font-bold">
-                {reading.title}
-            </h1>
+        <div>
+            <Navbar />
+            <div className="max-w-2xl mx-auto p-6 flex flex-col gap-6">
+                <h1 className="text-3xl font-bold">
+                    {reading.title}
+                </h1>
 
-            <p className="whitespace-pre-line text-muted-foreground">
-                {reading.content}
-            </p>
+                <p className="whitespace-pre-line text-muted-foreground">
+                    {reading.content}
+                </p>
 
-            <div className="flex gap-4 mt-4">
-                <a
-                    href={`/readings/${reading.id}/discussion`}
-                    className="bg-gray-200 px-4 py-2 rounded-lg"
-                >
-                    Go to Discussion
-                </a>
+                <div className="flex gap-4 mt-4">
+                    <a
+                        href={`/readings/${reading.id}/discussion`}
+                        className="bg-gray-200 px-4 py-2 rounded-lg"
+                    >
+                        Go to Discussion
+                    </a>
 
-                <a
-                    href={`/readings/${reading.id}/quiz`}
-                    className="bg-black text-white px-4 py-2 rounded-lg"
-                >
-                    Go to Quiz
-                </a>
+                    <a
+                        href={`/readings/${reading.id}/quiz`}
+                        className="bg-black text-white px-4 py-2 rounded-lg"
+                    >
+                        Go to Quiz
+                    </a>
+                </div>
             </div>
         </div>
     )

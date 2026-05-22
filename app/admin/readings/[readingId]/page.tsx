@@ -1,3 +1,5 @@
+import {Navbar} from "@/components/Navbar";
+
 type Reading = {
     id: string
     title: string
@@ -25,6 +27,7 @@ export default async function ReadingPage({
 
     return (
         <div>
+            <Navbar />
             <h1>{reading.title}</h1>
 
             <p>{reading.content}</p>
