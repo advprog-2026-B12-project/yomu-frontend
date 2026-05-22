@@ -94,10 +94,6 @@ export default function QuizPage({
   async function handleSubmit() {
     if (!reading) return
     const token = localStorage.getItem("token")
-    const formattedAnswers = Object.entries(answers).map(([questionId, optionId]) => ({
-      questionId,
-      optionId,
-    }))
 
     setSubmitting(true)
     setSubmitError("")
@@ -112,7 +108,7 @@ export default function QuizPage({
         body: JSON.stringify({
           userId,
           readingId: reading.id,
-          answers: formattedAnswers,
+          answers,
         }),
       })
 
