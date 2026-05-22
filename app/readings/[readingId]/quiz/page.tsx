@@ -2,6 +2,7 @@
 
 import { useEffect, useState, use } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { ArrowLeft, CheckCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -48,8 +49,15 @@ export default function QuizPage({
   params: Promise<{ readingId: string }>
 }) {
   const { readingId } = use(params)
-  const { userId, username } = useAuth()
+  const router = useRouter()
+  const { userId, username, isLoading } = useAuth()
   const { triggerAndNotify } = useAchievement()
+
+  useEffect(() => {
+    if (!isLoading && !username) {
+      router.push("/auth/login")
+    }
+  }, [isLoading, username, router])
 
   const [reading, setReading] = useState<Reading | null>(null)
   const [loadError, setLoadError] = useState("")
@@ -134,6 +142,8 @@ export default function QuizPage({
     }
   }
 
+  if (isLoading || !username) return null
+
   if (loadError) {
     return (
       <div className="flex flex-col min-h-screen bg-gray-50">
@@ -196,13 +206,6 @@ export default function QuizPage({
               <p className="text-sm text-muted-foreground">
                 {reading.questions.length} pertanyaan menanti kamu. Pastikan sudah membaca materinya!
               </p>
-              {!username && (
-                <p className="text-sm text-amber-600">
-                  Kamu harus{" "}
-                  <Link href="/auth/login" className="underline">login</Link>{" "}
-                  untuk menyimpan hasil quiz.
-                </p>
-              )}
               <div className="flex gap-3">
                 <Button onClick={() => setStarted(true)}>Mulai Quiz</Button>
                 <Button variant="outline" asChild>
