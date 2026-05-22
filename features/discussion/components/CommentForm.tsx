@@ -44,7 +44,6 @@ export function CommentForm({
         value={value}
         onChange={(e) => setValue(e.target.value)}
         rows={4}
-        aria-label="Tulis komentar baru"
         disabled={submitting || disabled}
       />
       {error && <p className="text-xs text-destructive">{error}</p>}

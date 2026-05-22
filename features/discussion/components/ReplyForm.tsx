@@ -38,7 +38,6 @@ export function ReplyForm({ submitting, onSubmit, onCancel }: ReplyFormProps) {
         value={value}
         onChange={(e) => setValue(e.target.value)}
         rows={3}
-        aria-label="Tulis balasan komentar"
         disabled={submitting}
       />
       {error && <p className="text-xs text-destructive">{error}</p>}

@@ -18,7 +18,7 @@ import {
   setReaction,
   updateComment,
 } from "../api";
-import { Comment, ReactionType, SortOption } from "../types";
+import { Comment, ReactionType } from "../types";
 import { CommentCard } from "./CommentCard";
 import { CommentForm } from "./CommentForm";
 
@@ -60,7 +60,6 @@ export function CommentList({ readingId }: CommentListProps) {
   const [submitting, setSubmitting] = useState(false);
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(false);
-  const [sort, setSort] = useState<SortOption>("newest");
   const isLoggedIn = Boolean(username);
   const isAdmin = role === "ADMIN";
 
@@ -72,8 +71,7 @@ export function CommentList({ readingId }: CommentListProps) {
         const data = await fetchComments(
           readingId,
           targetPage,
-          PAGE_SIZE,
-          sort,
+          PAGE_SIZE
         );
         setComments((prev) => (append ? [...prev, ...data] : data));
         setHasMore(data.length === PAGE_SIZE);
@@ -84,11 +82,13 @@ export function CommentList({ readingId }: CommentListProps) {
         setLoading(false);
       }
     },
-    [readingId, sort],
+    [readingId],
   );
 
   useEffect(() => {
-    loadComments(0, false);
+    queueMicrotask(() => {
+      loadComments(0, false);
+    });
   }, [loadComments]);
 
   const handleUnauthorized = useCallback(() => {
@@ -141,7 +141,20 @@ export function CommentList({ readingId }: CommentListProps) {
 
   const handleDelete = useCallback(
     async (commentId: string) => {
-      const target = comments.find((c) => c.id === commentId);
+      let target: Comment | undefined;
+      const findComment = (list: Comment[]) => {
+        for (const c of list) {
+          if (c.id === commentId) {
+            target = c;
+            return;
+          }
+          if (c.replies?.length > 0) {
+            findComment(c.replies);
+          }
+        }
+      };
+      findComment(comments);
+
       const isOwn = target?.authorId === userId;
       if (isOwn) {
         await withAuth(() => deleteComment(readingId, commentId));
@@ -160,13 +173,11 @@ export function CommentList({ readingId }: CommentListProps) {
       } else {
         await withAuth(() => removeReaction(commentId));
       }
-      // Optimistically update local state so UI feels snappy
-      setComments((prev) =>
-        prev.map((c) => {
-          if (c.id !== commentId) return c;
-          const old = c.myReaction;
+      const updateCommentReaction = (comment: Comment): Comment => {
+        if (comment.id === commentId) {
+          const old = comment.myReaction;
           const nextCounts: Partial<Record<ReactionType, number>> = {
-            ...(c.reactionCounts ?? {}),
+            ...(comment.reactionCounts ?? {}),
           };
           if (old) {
             nextCounts[old] = Math.max((nextCounts[old] ?? 0) - 1, 0);
@@ -174,20 +185,32 @@ export function CommentList({ readingId }: CommentListProps) {
           if (reactionType) {
             nextCounts[reactionType] = (nextCounts[reactionType] ?? 0) + 1;
           }
-          return { ...c, myReaction: reactionType, reactionCounts: nextCounts };
-        }),
-      );
+          return {
+            ...comment,
+            myReaction: reactionType,
+            reactionCounts: nextCounts,
+          };
+        }
+
+        // Rekursif update replies
+        if (comment.replies?.length > 0) {
+          return {
+            ...comment,
+            replies: comment.replies.map(updateCommentReaction),
+          };
+        }
+
+        return comment;
+      };
+
+      setComments((prev) => prev.map(updateCommentReaction));
     },
     [withAuth],
   );
 
-  const handleSortChange = (next: SortOption) => {
-    setSort(next);
-  };
-
   return (
     <div className="flex flex-col gap-6">
-      <section aria-label="Tulis komentar baru" className="flex flex-col gap-2">
+      <section className="flex flex-col gap-2">
         {authLoading ? (
           <Skeleton className="h-24 w-full" />
         ) : isLoggedIn ? (
@@ -203,29 +226,7 @@ export function CommentList({ readingId }: CommentListProps) {
         )}
       </section>
 
-      <div className="flex items-center gap-2">
-        <span className="text-sm text-muted-foreground">Urutkan:</span>
-        <Button
-          type="button"
-          size="xs"
-          variant={sort === "newest" ? "secondary" : "ghost"}
-          onClick={() => handleSortChange("newest")}
-          aria-label="Urutkan komentar terbaru"
-        >
-          Terbaru
-        </Button>
-        <Button
-          type="button"
-          size="xs"
-          variant={sort === "most_upvoted" ? "secondary" : "ghost"}
-          onClick={() => handleSortChange("most_upvoted")}
-          aria-label="Urutkan komentar paling banyak upvote"
-        >
-          Paling Populer
-        </Button>
-      </div>
-
-      <section aria-label="Daftar komentar" className="flex flex-col gap-4">
+      <section className="flex flex-col gap-4">
         {loading && comments.length === 0 ? (
           <div className="flex flex-col gap-4">
             {Array.from({ length: 3 }).map((_, i) => (
@@ -260,7 +261,6 @@ export function CommentList({ readingId }: CommentListProps) {
                   variant="outline"
                   onClick={() => loadComments(page + 1, true)}
                   disabled={loading}
-                  aria-label="Muat lebih banyak komentar"
                 >
                   {loading ? "Memuat..." : "Muat lebih banyak"}
                 </Button>

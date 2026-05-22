@@ -9,9 +9,14 @@ import {
 
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
+function authHeaders(): Record<string, string> {
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
     const res = await fetch(`${BASE}${path}`, {
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...authHeaders() },
         ...init,
     });
     if (!res.ok) throw new Error(`Request failed: ${res.status}`);
@@ -66,3 +71,23 @@ export const adminCreateOption = (
 
 export const adminDeleteOption = (optionId: string): Promise<void> =>
     request(`/api/admin/options/${optionId}`, { method: "DELETE" });
+
+// ── Admin: Update ───────────────────────────────────────────────────────────
+
+export const adminUpdateReading = (id: string, body: ReadingRequest): Promise<Reading> =>
+    request(`/api/admin/readings/${id}`, {
+        method: "PUT",
+        body: JSON.stringify(body),
+    });
+
+export const adminUpdateQuestion = (questionId: string, body: QuestionRequest): Promise<Question> =>
+    request(`/api/admin/questions/${questionId}`, {
+        method: "PUT",
+        body: JSON.stringify(body),
+    });
+
+export const adminUpdateOption = (optionId: string, body: OptionRequest): Promise<Option> =>
+    request(`/api/admin/options/${optionId}`, {
+        method: "PUT",
+        body: JSON.stringify(body),
+    });
