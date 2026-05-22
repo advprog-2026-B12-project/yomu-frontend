@@ -2,6 +2,7 @@
 
 import { useEffect, useState, use } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { ArrowLeft, CheckCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -48,8 +49,15 @@ export default function QuizPage({
   params: Promise<{ readingId: string }>
 }) {
   const { readingId } = use(params)
-  const { userId, username } = useAuth()
+  const router = useRouter()
+  const { userId, username, isLoading } = useAuth()
   const { triggerAndNotify } = useAchievement()
+
+  useEffect(() => {
+    if (!isLoading && !username) {
+      router.push("/auth/login")
+    }
+  }, [isLoading, username, router])
 
   const [reading, setReading] = useState<Reading | null>(null)
   const [loadError, setLoadError] = useState("")
@@ -86,10 +94,6 @@ export default function QuizPage({
   async function handleSubmit() {
     if (!reading) return
     const token = localStorage.getItem("token")
-    const formattedAnswers = Object.entries(answers).map(([questionId, optionId]) => ({
-      questionId,
-      optionId,
-    }))
 
     setSubmitting(true)
     setSubmitError("")
@@ -104,7 +108,7 @@ export default function QuizPage({
         body: JSON.stringify({
           userId,
           readingId: reading.id,
-          answers: formattedAnswers,
+          answers,
         }),
       })
 
@@ -133,6 +137,8 @@ export default function QuizPage({
       setSubmitting(false)
     }
   }
+
+  if (isLoading || !username) return null
 
   if (loadError) {
     return (
@@ -196,13 +202,6 @@ export default function QuizPage({
               <p className="text-sm text-muted-foreground">
                 {reading.questions.length} pertanyaan menanti kamu. Pastikan sudah membaca materinya!
               </p>
-              {!username && (
-                <p className="text-sm text-amber-600">
-                  Kamu harus{" "}
-                  <Link href="/auth/login" className="underline">login</Link>{" "}
-                  untuk menyimpan hasil quiz.
-                </p>
-              )}
               <div className="flex gap-3">
                 <Button onClick={() => setStarted(true)}>Mulai Quiz</Button>
                 <Button variant="outline" asChild>
