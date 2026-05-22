@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import { useCallback, useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
@@ -95,8 +95,12 @@ export default function LeaderboardPage() {
       router.push("/")
       return
     }
-    if (!isLoading) load()
-  }, [isLoading, username, router, load])
+    if (!isLoading) {
+      queueMicrotask(() => {
+        load();
+      });
+    }
+  }, [isLoading, username, router, load]);
 
   if (isLoading || !username) return null
 

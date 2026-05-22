@@ -30,8 +30,6 @@ export type ReactionRequest = {
   reactionType: ReactionType;
 };
 
-export type SortOption = "newest" | "most_upvoted";
-
 export type PaginatedComments = {
   content: Comment[];
   page: number;
