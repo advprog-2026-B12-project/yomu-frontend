@@ -13,7 +13,8 @@ export type Comment = {
   authorId: string;
   parentId: string | null;
   content: string;
-  deleted: boolean;
+  deleted?: boolean;
+  isDeleted?: boolean;
   createdAt: string;
   updatedAt: string;
   editedAt: string | null;

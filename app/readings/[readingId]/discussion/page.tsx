@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, use } from "react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { CommentList } from "@/features/discussion/components/CommentList";
@@ -17,28 +17,39 @@ interface DiscussionPageProps {
 }
 
 export default function DiscussionPage({ params }: DiscussionPageProps) {
+  const { readingId } = use(params);
   const [reading, setReading] = useState<Reading | null>(null);
-  const [readingId, setReadingId] = useState<string>("");
 
   useEffect(() => {
-    params.then(({ readingId }) => {
-      setReadingId(readingId);
-      const token = localStorage.getItem("token");
-      fetch(`${API}/api/readings/${readingId}`, {
-        cache: "no-store",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
+    const token = localStorage.getItem("token");
+    fetch(`${API}/api/readings/${readingId}`, {
+      cache: "no-store",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    })
+      .then(async (res) => {
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error(body.error || `Error ${res.status}`);
+        }
+        return res.json();
       })
-        .then((res) => {
-          if (!res.ok) throw new Error(`${res.status}`);
-          return res.json();
-        })
-        .then((data: Reading) => setReading(data))
-        .catch(() => setReading({ id: readingId, title: "Bacaan" }));
-    });
-  }, [params]);
+      .then((data: Reading) => setReading(data))
+      .catch(() => setReading({ id: readingId, title: "Bacaan" }));
+  }, [readingId]);
+
+  if (!readingId) {
+    return (
+      <main className="max-w-2xl mx-auto px-4 py-10">
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold">Diskusi</h1>
+          <p className="text-sm text-muted-foreground mt-1">Memuat...</p>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="max-w-2xl mx-auto px-4 py-10">

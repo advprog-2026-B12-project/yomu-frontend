@@ -1,35 +1,35 @@
-"use client"
+"use client";
 
-import { useEffect, useState, use } from "react"
-import Link from "next/link"
-import { ArrowLeft } from "lucide-react"
-import { useAuth } from "@/app/providers/AuthProvider"
-import { useAchievement } from "@/app/providers/AchievementProvider"
-import { Navbar } from "@/components/Navbar"
-import { Skeleton } from "@/components/ui/skeleton"
+import { useEffect, useState, use } from "react";
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
+import { useAuth } from "@/app/providers/AuthProvider";
+import { useAchievement } from "@/app/providers/AchievementProvider";
+import { Navbar } from "@/components/Navbar";
+import { Skeleton } from "@/components/ui/skeleton";
 
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080"
+const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
 type Reading = {
-  id: string
-  title: string
-  content: string
-}
+  id: string;
+  title: string;
+  content: string;
+};
 
 export default function ReadingPage({
   params,
 }: {
-  params: Promise<{ readingId: string }>
+  params: Promise<{ readingId: string }>;
 }) {
-  const { readingId } = use(params)
-  const { userId } = useAuth()
-  const { triggerAndNotify } = useAchievement()
+  const { readingId } = use(params);
+  const { userId } = useAuth();
+  const { triggerAndNotify } = useAchievement();
 
-  const [reading, setReading] = useState<Reading | null>(null)
-  const [error, setError] = useState("")
+  const [reading, setReading] = useState<Reading | null>(null);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    const token = localStorage.getItem("token")
+    const token = localStorage.getItem("token");
     fetch(`${API}/api/readings/${readingId}`, {
       cache: "no-store",
       headers: {
@@ -37,16 +37,21 @@ export default function ReadingPage({
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
     })
-      .then((res) => {
-        if (!res.ok) throw new Error(`${res.status}`)
-        return res.json()
+      .then(async (res) => {
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error(body.error || `Error ${res.status}`);
+        }
+        return res.json();
       })
       .then((data: Reading) => {
-        setReading(data)
-        if (userId) void triggerAndNotify(userId, "READING_COMPLETED")
+        setReading(data);
+        if (userId) void triggerAndNotify(userId, "READING_COMPLETED");
       })
-      .catch(() => setError("Gagal memuat bacaan."))
-  }, [readingId, userId, triggerAndNotify])
+      .catch((err) =>
+        setError(err instanceof Error ? err.message : "Gagal memuat bacaan."),
+      );
+  }, [readingId, userId, triggerAndNotify]);
 
   if (error) {
     return (
@@ -56,7 +61,7 @@ export default function ReadingPage({
           <p className="text-sm text-destructive text-center">{error}</p>
         </main>
       </div>
-    )
+    );
   }
 
   if (!reading) {
@@ -70,7 +75,7 @@ export default function ReadingPage({
           <Skeleton className="h-4 w-3/4" />
         </main>
       </div>
-    )
+    );
   }
 
   return (
@@ -108,5 +113,5 @@ export default function ReadingPage({
         </div>
       </main>
     </div>
-  )
+  );
 }
