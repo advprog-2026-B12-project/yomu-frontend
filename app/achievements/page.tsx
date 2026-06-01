@@ -74,15 +74,8 @@ export default function AchievementsPage() {
         setAchievements(progressData);
         setUserAchievements(userAchData);
 
-        const todayStr = new Date().toISOString().slice(0, 10);
         const merged = activeMissions.map((mission) => {
-          const progress = userMissions.find((um) => {
-            if (um.missionId !== mission.id) return false;
-            const assignedStr = Array.isArray(um.dateAssigned)
-              ? `${um.dateAssigned[0]}-${String(um.dateAssigned[1]).padStart(2, "0")}-${String(um.dateAssigned[2]).padStart(2, "0")}`
-              : String(um.dateAssigned);
-            return assignedStr.startsWith(todayStr);
-          });
+          const progress = userMissions.find((um) => um.missionId === mission.id);
           return { mission, progress };
         });
         setMissions(merged);
