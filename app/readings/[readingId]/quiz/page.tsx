@@ -1,324 +1,240 @@
 "use client"
 
 import { useEffect, useState, use } from "react"
-import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { ArrowLeft, CheckCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Skeleton } from "@/components/ui/skeleton"
-import { Navbar } from "@/components/Navbar"
 import { useAuth } from "@/app/providers/AuthProvider"
-import { useAchievement } from "@/app/providers/AchievementProvider"
-
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080"
 
 type Option = {
-  id: string
-  optionText: string
+    id: string
+    optionText: string
+    correct: boolean
 }
 
 type Question = {
-  id: string
-  questionText: string
-  options: Option[]
+    id: string
+    questionText: string
+    options: Option[]
 }
 
 type Reading = {
-  id: string
-  title: string
-  questions: Question[]
+    id: string
+    title: string
+    content: string
+    questions: Question[]
+}
+
+type QuizSubmitRequest = {
+    userId: string
+    readingId: string
+    answers: Record<string, string>
 }
 
 async function getQuiz(readingId: string): Promise<Reading> {
-  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null
-  const res = await fetch(`${API}/api/quiz/${readingId}`, {
-    cache: "no-store",
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-  })
-  if (!res.ok) throw new Error("Failed to fetch quiz")
-  return res.json()
+    const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/quiz/${readingId}`,
+        { cache: "no-store" }
+    )
+
+    if (!res.ok) {
+        throw new Error("Failed to fetch quiz")
+    }
+
+    return res.json()
 }
 
 export default function QuizPage({
-  params,
-}: {
-  params: Promise<{ readingId: string }>
+                                     params,
+                                 }: {
+    params: Promise<{ readingId: string }>
 }) {
-  const { readingId } = use(params)
-  const router = useRouter()
-  const { userId, username, isLoading } = useAuth()
-  const { triggerAndNotify } = useAchievement()
+    const { readingId } = use(params)
+    const { userId } = useAuth()
+    const [reading, setReading] = useState<Reading | null>(null)
+    const [started, setStarted] = useState(false)
+    const [answers, setAnswers] = useState<Record<string, string>>({})
+    const [submitted, setSubmitted] = useState(false)
+    const [score, setScore] = useState(0)
+    const [alreadyCompleted, setAlreadyCompleted] = useState(false)
+    const [previousScore, setPreviousScore] = useState<{score: number, total: number} | null>(null)
 
-  useEffect(() => {
-    if (!isLoading && !username) {
-      router.push("/auth/login")
+    useEffect(() => {
+        getQuiz(readingId).then(setReading)
+
+        if (!userId) return
+
+        fetch(
+            `${process.env.NEXT_PUBLIC_API_URL}/api/quiz/status/${userId}/${readingId}`
+        )
+            .then((res) => res.json())
+            .then((data) => {
+                setAlreadyCompleted(data.completed)
+                if (data.completed) {
+                    setPreviousScore({ score: data.score, total: data.total })
+                }
+            })
+            .catch((err) => {
+                console.error(err)
+            })
+
+    }, [readingId, userId])
+
+    if (!reading) return <p>Loading...</p>
+
+    function handleSelect(questionId: string, optionId: string) {
+        if (submitted) return
+
+        setAnswers((prev) => ({
+            ...prev,
+            [questionId]: optionId,
+        }))
     }
-  }, [isLoading, username, router])
 
-  const [reading, setReading] = useState<Reading | null>(null)
-  const [loadError, setLoadError] = useState("")
-  const [started, setStarted] = useState(false)
-  const [answers, setAnswers] = useState<Record<string, string>>({})
-  const [submitted, setSubmitted] = useState(false)
-  const [score, setScore] = useState(0)
-  const [submitting, setSubmitting] = useState(false)
-  const [submitError, setSubmitError] = useState("")
-  const [alreadyCompleted, setAlreadyCompleted] = useState(false)
+    async function handleSubmit() {
+        if (!reading) return
 
-  useEffect(() => {
-    getQuiz(readingId)
-      .then(setReading)
-      .catch(() => setLoadError("Gagal memuat quiz."))
-  }, [readingId])
+        const token = localStorage.getItem("token");
+        const userId = localStorage.getItem("userId") ?? "";
 
-  useEffect(() => {
-    if (!userId) return
-    const token = localStorage.getItem("token")
-    fetch(`${API}/api/quiz/status/${readingId}`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    })
-      .then((res) => res.json())
-      .then((data) => setAlreadyCompleted(data.completed))
-      .catch(() => {})
-  }, [readingId, userId])
-
-  function handleSelect(questionId: string, optionId: string) {
-    if (submitted) return
-    setAnswers((prev) => ({ ...prev, [questionId]: optionId }))
-  }
-
-  async function handleSubmit() {
-    if (!reading) return
-    const token = localStorage.getItem("token")
-
-    setSubmitting(true)
-    setSubmitError("")
-
-    try {
-      const res = await fetch(`${API}/api/quiz/submit`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({
-          userId,
-          readingId: reading.id,
-          answers,
-        }),
-      })
-
-      if (!res.ok) {
-        const text = await res.text()
-        if (res.status === 409) {
-          setAlreadyCompleted(true)
-          return
+        const payload: QuizSubmitRequest = {
+            userId: userId,
+            readingId: reading.id,
+            answers: answers,
         }
-        throw new Error(text || "Gagal submit quiz")
-      }
 
-      const result = await res.json()
-      setScore(result.score)
-      setSubmitted(true)
+        try {
+            const res = await fetch(
+                `${process.env.NEXT_PUBLIC_API_URL}/api/quiz/submit`,
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${token}`,
+                    },
+                    body: JSON.stringify(payload),
+                }
+            )
 
-      if (userId) {
-        void triggerAndNotify(userId, "QUIZ_FINISHED")
-        if (result.score === reading.questions.length && reading.questions.length > 0) {
-          void triggerAndNotify(userId, "PERFECT_QUIZ_SCORE")
-        }
-      }
-    } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : "Gagal submit quiz.")
-    } finally {
-      setSubmitting(false)
-    }
-  }
+            if (!res.ok) {
+                const text = await res.text()
 
-  if (isLoading || !username) return null
+                console.error("BACKEND ERROR:", text)
 
-  if (loadError) {
-    return (
-      <div className="flex flex-col min-h-screen bg-gray-50">
-        <Navbar />
-        <main className="max-w-2xl mx-auto w-full px-4 py-8">
-          <p className="text-sm text-destructive text-center">{loadError}</p>
-        </main>
-      </div>
-    )
-  }
+                if (res.status === 409) {
+                    alert("You have already completed this quiz.")
+                    return
+                }
 
-  if (!reading) {
-    return (
-      <div className="flex flex-col min-h-screen bg-gray-50">
-        <Navbar />
-        <main className="max-w-2xl mx-auto w-full px-4 py-8 flex flex-col gap-4">
-          <Skeleton className="h-8 w-64" />
-          <Skeleton className="h-32 w-full rounded-xl" />
-          <Skeleton className="h-32 w-full rounded-xl" />
-        </main>
-      </div>
-    )
-  }
-
-  if (alreadyCompleted) {
-    return (
-      <div className="flex flex-col min-h-screen bg-gray-50">
-        <Navbar />
-        <main className="max-w-2xl mx-auto w-full px-4 py-8">
-          <Card>
-            <CardContent className="flex flex-col items-center gap-4 py-12">
-              <CheckCircle className="size-12 text-green-500" />
-              <p className="text-lg font-semibold">Quiz sudah dikerjakan</p>
-              <p className="text-sm text-muted-foreground">
-                Kamu sudah menyelesaikan quiz ini sebelumnya.
-              </p>
-              <Button asChild variant="outline">
-                <Link href={`/readings/${readingId}`}>
-                  <ArrowLeft className="size-4 mr-1.5" />
-                  Kembali ke Reading
-                </Link>
-              </Button>
-            </CardContent>
-          </Card>
-        </main>
-      </div>
-    )
-  }
-
-  if (!started) {
-    return (
-      <div className="flex flex-col min-h-screen bg-gray-50">
-        <Navbar />
-        <main className="max-w-2xl mx-auto w-full px-4 py-8">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-xl">{reading.title}</CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-4">
-              <p className="text-sm text-muted-foreground">
-                {reading.questions.length} pertanyaan menanti kamu. Pastikan sudah membaca materinya!
-              </p>
-              <div className="flex gap-3">
-                <Button onClick={() => setStarted(true)}>Mulai Quiz</Button>
-                <Button variant="outline" asChild>
-                  <Link href={`/readings/${readingId}`}>
-                    <ArrowLeft className="size-4 mr-1.5" />
-                    Kembali
-                  </Link>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </main>
-      </div>
-    )
-  }
-
-  if (submitted) {
-    const total = reading.questions.length
-    const percentage = total > 0 ? Math.round((score / total) * 100) : 0
-
-    return (
-      <div className="flex flex-col min-h-screen bg-gray-50">
-        <Navbar />
-        <main className="max-w-2xl mx-auto w-full px-4 py-8">
-          <Card>
-            <CardContent className="flex flex-col items-center gap-6 py-12">
-              <CheckCircle className="size-14 text-green-500" />
-              <div className="text-center">
-                <p className="text-2xl font-bold">{score} / {total}</p>
-                <p className="text-sm text-muted-foreground mt-1">{percentage}% benar</p>
-              </div>
-              <p className="text-sm text-center text-muted-foreground max-w-xs">
-                {percentage >= 80
-                  ? "Luar biasa! Kamu sangat menguasai materi ini."
-                  : percentage >= 60
-                  ? "Bagus! Terus belajar untuk hasil yang lebih baik."
-                  : "Jangan menyerah, coba baca ulang materinya!"}
-              </p>
-              <Button asChild variant="outline">
-                <Link href={`/readings/${readingId}`}>
-                  <ArrowLeft className="size-4 mr-1.5" />
-                  Kembali ke Reading
-                </Link>
-              </Button>
-            </CardContent>
-          </Card>
-        </main>
-      </div>
-    )
-  }
-
-  return (
-    <div className="flex flex-col min-h-screen bg-gray-50">
-      <Navbar />
-      <main className="max-w-2xl mx-auto w-full px-4 py-8 flex flex-col gap-6">
-        <div>
-          <h1 className="text-xl font-bold">Quiz: {reading.title}</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            {Object.keys(answers).length} / {reading.questions.length} pertanyaan dijawab
-          </p>
-        </div>
-
-        {reading.questions.map((q, index) => (
-          <Card key={q.id}>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-semibold leading-relaxed">
-                {index + 1}. {q.questionText}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-2">
-              {q.options.map((o) => {
-                const isSelected = answers[q.id] === o.id
-                return (
-                  <label
-                    key={o.id}
-                    className={`flex items-center gap-3 border rounded-lg p-3 cursor-pointer transition-colors ${
-                      isSelected
-                        ? "bg-primary/5 border-primary"
-                        : "hover:bg-gray-50"
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name={q.id}
-                      checked={isSelected}
-                      onChange={() => handleSelect(q.id, o.id)}
-                      className="shrink-0"
-                    />
-                    <span className="text-sm">{o.optionText}</span>
-                  </label>
-                )
-              })}
-            </CardContent>
-          </Card>
-        ))}
-
-        {submitError && (
-          <p className="text-sm text-destructive text-center">{submitError}</p>
-        )}
-
-        <div className="flex gap-3">
-          <Button
-            onClick={handleSubmit}
-            disabled={
-              submitting ||
-              Object.keys(answers).length < reading.questions.length
+                throw new Error(text || "Failed to submit quiz")
             }
-          >
-            {submitting ? "Mengirim..." : "Submit Jawaban"}
-          </Button>
-          <p className="text-xs text-muted-foreground self-center">
-            {reading.questions.length - Object.keys(answers).length > 0
-              ? `Masih ada ${reading.questions.length - Object.keys(answers).length} pertanyaan belum dijawab`
-              : "Semua pertanyaan sudah dijawab!"}
-          </p>
+
+            const result = await res.json()
+
+            setScore(result.score)
+            setSubmitted(true)
+
+            console.log("BACKEND_RESULT", result)
+        } catch (err) {
+            console.error(err)
+            alert("Submission failed")
+        }
+    }
+
+    if (alreadyCompleted) {
+        return (
+            <div className="max-w-2xl mx-auto p-6 flex flex-col gap-6">
+                <h1 className="text-2xl font-bold">{reading?.title}</h1>
+
+                <div className="p-6 border rounded-xl text-center flex flex-col gap-2">
+                    <p className="text-lg font-semibold">You have already completed this quiz.</p>
+                    {previousScore && (
+                        <p className="text-3xl font-bold text-primary">
+                            {previousScore.score} / {previousScore.total}
+                        </p>
+                    )}
+                </div>
+
+                <a
+                    href={`/readings/${readingId}`}
+                    className="bg-gray-200 px-4 py-2 rounded-lg text-center"
+                >
+                    Back to Reading
+                </a>
+            </div>
+        )
+    }
+
+    if (!started) {
+        return (
+            <div className="max-w-2xl mx-auto p-6 flex flex-col gap-8">
+                <h1 className="text-2xl font-bold mx-auto">{reading.title}</h1>
+
+                <Button onClick={() => setStarted(true)}>
+                    Start Quiz
+                </Button>
+            </div>
+        )
+    }
+
+    return (
+        <div className="max-w-2xl mx-auto p-6 flex flex-col gap-6">
+            <h2 className="text-xl font-semibold">Quiz</h2>
+
+            {reading.questions.map((q, index) => (
+                <div key={q.id} className="border p-4 rounded-xl">
+                    <p className="font-medium mb-3">
+                        {index + 1}. {q.questionText}
+                    </p>
+
+                    <div className="flex flex-col gap-2">
+                        {q.options.map((o) => {
+                            const isSelected = answers[q.id] === o.id
+
+                            return (
+                                <label
+                                    key={o.id}
+                                    className={`border p-2 rounded cursor-pointer ${
+                                        isSelected
+                                            ? "bg-primary/10 border-primary"
+                                            : ""
+                                    }`}
+                                >
+                                    <input
+                                        type="radio"
+                                        name={q.id}
+                                        checked={isSelected}
+                                        onChange={() =>
+                                            handleSelect(q.id, o.id)
+                                        }
+                                        className="mr-2"
+                                    />
+                                    {o.optionText}
+                                </label>
+                            )
+                        })}
+                    </div>
+                </div>
+            ))}
+
+            {!submitted ? (
+                <Button onClick={handleSubmit}>
+                    Submit
+                </Button>
+            ) : (
+                <div className="flex flex-col items-center gap-4">
+                    <div className="p-4 border rounded-xl w-full text-center">
+                        <p className="font-semibold">
+                            Score: {score} / {reading.questions.length}
+                        </p>
+                    </div>
+
+                    <a
+                        href={`/readings/${reading.id}`}
+                        className="bg-gray-200 px-4 py-2 rounded-lg w-full text-center"
+                    >
+                        Back to Reading
+                    </a>
+                </div>
+            )}
         </div>
-      </main>
-    </div>
-  )
+    )
 }

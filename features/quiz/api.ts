@@ -4,27 +4,33 @@ import {
     Option,
     ReadingRequest,
     QuestionRequest,
-    OptionRequest,
 } from "./types";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
 function authHeaders(): Record<string, string> {
-    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    if (typeof window === "undefined") return {};
+    const token = localStorage.getItem("token");
     return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
     const res = await fetch(`${BASE}${path}`, {
-        headers: { "Content-Type": "application/json", ...authHeaders() },
+        cache: "no-store",
         ...init,
+        headers: {
+            "Content-Type": "application/json",
+            ...authHeaders(),
+            ...(init?.headers ?? {}),
+        },
     });
-    if (!res.ok) throw new Error(`Request failed: ${res.status}`);
+
     if (res.status === 204) return undefined as T;
+    if (!res.ok) throw new Error(`Request failed: ${res.status}`);
     return res.json();
 }
 
-// ── Admin: Readings ─────────────────────────────────────────────────────────
+// Admin: Readings
 
 export const adminGetReadings = (): Promise<Reading[]> =>
     request("/api/admin/readings");
@@ -38,7 +44,7 @@ export const adminCreateReading = (body: ReadingRequest): Promise<Reading> =>
 export const adminDeleteReading = (id: string): Promise<void> =>
     request(`/api/admin/readings/${id}`, { method: "DELETE" });
 
-// ── Admin: Questions ────────────────────────────────────────────────────────
+// Admin: Questions
 
 export const adminGetQuestions = (readingId: string): Promise<Question[]> =>
     request(`/api/admin/questions/reading/${readingId}`);
@@ -55,39 +61,28 @@ export const adminCreateQuestion = (
 export const adminDeleteQuestion = (questionId: string): Promise<void> =>
     request(`/api/admin/questions/${questionId}`, { method: "DELETE" });
 
-// ── Admin: Options ──────────────────────────────────────────────────────────
+// Admin: Options
 
 export const adminGetOptions = (questionId: string): Promise<Option[]> =>
     request(`/api/admin/options/question/${questionId}`);
 
 export const adminCreateOption = (
     questionId: string,
-    body: OptionRequest
+    body: { optionText: string; correct: boolean }
 ): Promise<Option> =>
     request(`/api/admin/options/${questionId}`, {
         method: "POST",
         body: JSON.stringify(body),
     });
 
-export const adminDeleteOption = (optionId: string): Promise<void> =>
-    request(`/api/admin/options/${optionId}`, { method: "DELETE" });
-
-// ── Admin: Update ───────────────────────────────────────────────────────────
-
-export const adminUpdateReading = (id: string, body: ReadingRequest): Promise<Reading> =>
-    request(`/api/admin/readings/${id}`, {
-        method: "PUT",
-        body: JSON.stringify(body),
-    });
-
-export const adminUpdateQuestion = (questionId: string, body: QuestionRequest): Promise<Question> =>
-    request(`/api/admin/questions/${questionId}`, {
-        method: "PUT",
-        body: JSON.stringify(body),
-    });
-
-export const adminUpdateOption = (optionId: string, body: OptionRequest): Promise<Option> =>
+export const adminUpdateOption = (
+    optionId: string,
+    body: { optionText: string; correct: boolean }
+): Promise<Option> =>
     request(`/api/admin/options/${optionId}`, {
         method: "PUT",
         body: JSON.stringify(body),
     });
+
+export const adminDeleteOption = (optionId: string): Promise<void> =>
+    request(`/api/admin/options/${optionId}`, { method: "DELETE" });

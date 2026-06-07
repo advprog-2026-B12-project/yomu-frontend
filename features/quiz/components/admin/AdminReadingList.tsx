@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { PlusIcon, Trash2Icon, BookOpenIcon, ChevronDownIcon, ChevronUpIcon, PencilIcon } from "lucide-react";
+import { PlusIcon, Trash2Icon, BookOpenIcon, ChevronDownIcon, ChevronUpIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,9 +17,10 @@ import {
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
-import { adminGetReadings, adminCreateReading, adminDeleteReading, adminUpdateReading } from "../../api";
+import { adminGetReadings, adminCreateReading, adminDeleteReading } from "../../api";
 import { Reading } from "../../types";
 import { QuestionManager } from "./QuestionManager";
+import { ConfirmDialog } from "./ConfirmDialog";
 
 function ReadingSkeleton() {
     return (
@@ -35,23 +36,13 @@ export function AdminReadingList() {
     const [readings, setReadings] = useState<Reading[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-
-    // Create dialog state
     const [open, setOpen] = useState(false);
     const [title, setTitle] = useState("");
     const [content, setContent] = useState("");
     const [saving, setSaving] = useState(false);
     const [formError, setFormError] = useState<string | null>(null);
-
-    // Edit dialog state
-    const [editOpen, setEditOpen] = useState(false);
-    const [editTarget, setEditTarget] = useState<Reading | null>(null);
-    const [editTitle, setEditTitle] = useState("");
-    const [editContent, setEditContent] = useState("");
-    const [editError, setEditError] = useState<string | null>(null);
-
-    // Expanded reading for question management
     const [expandedId, setExpandedId] = useState<string | null>(null);
+    const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
     useEffect(() => {
         adminGetReadings()
@@ -80,42 +71,16 @@ export function AdminReadingList() {
         }
     };
 
-    const handleOpenEdit = (reading: Reading) => {
-        setEditTarget(reading);
-        setEditTitle(reading.title);
-        setEditContent(reading.content ?? "");
-        setEditError(null);
-        setEditOpen(true);
-    };
-
-    const handleUpdate = async () => {
-        if (!editTarget || !editTitle.trim() || !editContent.trim()) {
-            setEditError("Judul dan konten tidak boleh kosong.");
-            return;
-        }
-        setSaving(true);
-        setEditError(null);
+    const handleDelete = async () => {
+        if (!deleteTarget) return;
         try {
-            const updated = await adminUpdateReading(editTarget.id, {
-                title: editTitle.trim(),
-                content: editContent.trim(),
-            });
-            setReadings((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
-            setEditOpen(false);
-        } catch (e: unknown) {
-            setEditError(e instanceof Error ? e.message : "Gagal mengupdate bacaan");
-        } finally {
-            setSaving(false);
-        }
-    };
-
-    const handleDelete = async (id: string) => {
-        try {
-            await adminDeleteReading(id);
-            setReadings((prev) => prev.filter((r) => r.id !== id));
-            if (expandedId === id) setExpandedId(null);
+            await adminDeleteReading(deleteTarget);
+            setReadings((prev) => prev.filter((r) => r.id !== deleteTarget));
+            if (expandedId === deleteTarget) setExpandedId(null);
         } catch (e: unknown) {
             setError(e instanceof Error ? e.message : "Gagal menghapus bacaan");
+        } finally {
+            setDeleteTarget(null);
         }
     };
 
@@ -231,15 +196,8 @@ export function AdminReadingList() {
                                         <Button
                                             variant="ghost"
                                             size="icon-sm"
-                                            onClick={() => handleOpenEdit(reading)}
-                                        >
-                                            <PencilIcon />
-                                        </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon-sm"
                                             className="text-destructive hover:text-destructive"
-                                            onClick={() => handleDelete(reading.id)}
+                                            onClick={() => setDeleteTarget(reading.id)}
                                         >
                                             <Trash2Icon />
                                         </Button>
@@ -258,40 +216,14 @@ export function AdminReadingList() {
                 </div>
             )}
 
-            {/* Edit Dialog */}
-            <Dialog open={editOpen} onOpenChange={(v) => { setEditOpen(v); setEditError(null); }}>
-                <DialogContent className="sm:max-w-2xl">
-                    <DialogHeader>
-                        <DialogTitle>Edit Bacaan</DialogTitle>
-                    </DialogHeader>
-                    <div className="flex flex-col gap-4 py-2">
-                        <div className="flex flex-col gap-2">
-                            <Label htmlFor="edit-title">Judul</Label>
-                            <Input
-                                id="edit-title"
-                                value={editTitle}
-                                onChange={(e) => setEditTitle(e.target.value)}
-                            />
-                        </div>
-                        <div className="flex flex-col gap-2">
-                            <Label htmlFor="edit-content">Konten</Label>
-                            <Textarea
-                                id="edit-content"
-                                value={editContent}
-                                onChange={(e) => setEditContent(e.target.value)}
-                                className="min-h-48 resize-y"
-                            />
-                        </div>
-                        {editError && <p className="text-sm text-destructive">{editError}</p>}
-                    </div>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setEditOpen(false)}>Batal</Button>
-                        <Button onClick={handleUpdate} disabled={saving}>
-                            {saving ? "Menyimpan..." : "Simpan"}
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+            <ConfirmDialog
+                open={!!deleteTarget}
+                title="Hapus Bacaan?"
+                description="Bacaan ini beserta semua pertanyaan dan opsinya akan dihapus permanen."
+                onConfirm={handleDelete}
+                onCancel={() => setDeleteTarget(null)}
+            />
+
         </div>
     );
 }
