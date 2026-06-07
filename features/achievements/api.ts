@@ -60,9 +60,7 @@ export const fetchUserDailyMissions = (userId: string): Promise<UserDailyMission
   req(`/api/daily-missions/user/${userId}`)
 
 // ── Admin: Trigger Event ────────────────────────────────────────────────────
-
-export const triggerAchievementEvent = (userId: string, eventType: string): Promise<EventTriggerResponse> =>
-  req("/api/achievements/trigger", "POST", { userId, eventType })
+// (Removed as backend moved to EDA and endpoint no longer exists)
 
 // ── Admin: Achievements ─────────────────────────────────────────────────────
 

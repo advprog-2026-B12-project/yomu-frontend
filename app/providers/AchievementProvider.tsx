@@ -2,7 +2,6 @@
 
 import React, { createContext, useContext, useState, useCallback } from "react";
 import { AchievementProgress } from "@/features/achievements/types";
-import { triggerAchievementEvent } from "@/features/achievements/api";
 import { AchievementPopup } from "@/components/ui/AchievementPopup";
 
 interface QueueItem {
@@ -28,35 +27,8 @@ export function AchievementProvider({
 
   const triggerAndNotify = useCallback(
     async (userId: string, eventType: string) => {
-      try {
-        const response = await triggerAchievementEvent(userId, eventType);
-
-        const newItems: QueueItem[] = [];
-
-        if (
-          response.unlockedAchievements &&
-          response.unlockedAchievements.length > 0
-        ) {
-          response.unlockedAchievements.forEach((ach) => {
-            newItems.push({ achievement: ach, dailyMission: null });
-          });
-        }
-
-        if (
-          response.completedDailyMissions &&
-          response.completedDailyMissions.length > 0
-        ) {
-          response.completedDailyMissions.forEach((mission) => {
-            newItems.push({ achievement: null, dailyMission: mission });
-          });
-        }
-
-        if (newItems.length > 0) {
-          setQueue((prev) => [...prev, ...newItems]);
-        }
-      } catch (error) {
-        console.error("Failed to trigger achievement event:", error);
-      }
+      // Backend uses Event-Driven Architecture now, so frontend doesn't trigger events manually.
+      // Notification of newly unlocked achievements requires polling/SSE in the future.
     },
     [],
   );
