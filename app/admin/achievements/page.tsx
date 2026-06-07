@@ -24,9 +24,8 @@ import {
   createAchievement,
   updateAchievement,
   deleteAchievement,
-  triggerAchievementEvent,
 } from "@/features/achievements/api";
-import type { AchievementResponse, AchievementRequest, EventTriggerResponse } from "@/features/achievements/types";
+import type { AchievementResponse, AchievementRequest } from "@/features/achievements/types";
 import { ACHIEVEMENT_EVENT_TYPES } from "@/features/achievements/types";
 
 function AchievementSkeleton() {
@@ -70,11 +69,7 @@ export default function AdminAchievementsPage() {
   const [editForm, setEditForm] = useState<AchievementRequest>(EMPTY_FORM);
   const [editError, setEditError] = useState<string | null>(null);
 
-  const [triggerUserId, setTriggerUserId] = useState("");
-  const [triggerEventType, setTriggerEventType] = useState<string>(ACHIEVEMENT_EVENT_TYPES[0]);
-  const [triggerResult, setTriggerResult] = useState<EventTriggerResponse | null>(null);
-  const [triggering, setTriggering] = useState(false);
-  const [triggerError, setTriggerError] = useState<string | null>(null);
+
 
   useEffect(() => {
     if (!isLoading && !username) router.push("/");
@@ -172,23 +167,7 @@ export default function AdminAchievementsPage() {
     }
   };
 
-  const handleTrigger = async () => {
-    if (!triggerUserId.trim()) {
-      setTriggerError("User ID wajib diisi.");
-      return;
-    }
-    setTriggering(true);
-    setTriggerError(null);
-    setTriggerResult(null);
-    try {
-      const result = await triggerAchievementEvent(triggerUserId.trim(), triggerEventType);
-      setTriggerResult(result);
-    } catch (e: unknown) {
-      setTriggerError(e instanceof Error ? e.message : "Gagal trigger event");
-    } finally {
-      setTriggering(false);
-    }
-  };
+
 
   if (isLoading || !username || role !== "ADMIN") return null;
 
@@ -256,66 +235,6 @@ export default function AdminAchievementsPage() {
           </div>
         )}
 
-        {/* Trigger Achievement Event */}
-        <div className="rounded-lg border border-dashed border-orange-300 bg-orange-50/50 p-5 flex flex-col gap-4">
-          <div>
-            <p className="text-sm font-semibold text-orange-700">Trigger Achievement Event</p>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Kirim event ke user tertentu untuk memicu progress achievement dan daily mission.
-            </p>
-          </div>
-          <div className="flex flex-col gap-3">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-medium text-gray-700">User ID (UUID)</label>
-                <input
-                  type="text"
-                  placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-                  value={triggerUserId}
-                  onChange={(e) => setTriggerUserId(e.target.value)}
-                  className="flex h-9 w-full rounded-md border border-input bg-white px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring font-mono"
-                />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-medium text-gray-700">Event Type</label>
-                <select
-                  value={triggerEventType}
-                  onChange={(e) => setTriggerEventType(e.target.value)}
-                  className="flex h-9 w-full rounded-md border border-input bg-white px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                >
-                  {ACHIEVEMENT_EVENT_TYPES.map((et) => (
-                    <option key={et} value={et}>{et}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            {triggerError && <p className="text-xs text-destructive">{triggerError}</p>}
-            {triggerResult && (
-              <div className="rounded-md bg-white border p-3 text-xs flex flex-col gap-1">
-                <p className="font-medium text-green-700">Event berhasil dikirim</p>
-                <p className="text-muted-foreground">
-                  Achievement unlocked: {triggerResult.unlockedAchievements.length > 0
-                    ? triggerResult.unlockedAchievements.map((a) => a.name).join(", ")
-                    : "—"}
-                </p>
-                <p className="text-muted-foreground">
-                  Daily mission selesai: {triggerResult.completedDailyMissions.length > 0
-                    ? triggerResult.completedDailyMissions.join(", ")
-                    : "—"}
-                </p>
-              </div>
-            )}
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={handleTrigger}
-              disabled={triggering}
-              className="self-start border-orange-300 text-orange-700 hover:bg-orange-100"
-            >
-              {triggering ? "Mengirim..." : "Kirim Event"}
-            </Button>
-          </div>
-        </div>
 
         {/* Edit Dialog */}
         <Dialog open={editOpen} onOpenChange={(v) => { setEditOpen(v); setEditError(null); }}>
