@@ -82,11 +82,16 @@ export interface DailyMissionRequest {
 export interface UserDailyMission {
   id: string
   userId: string
-  dailyMission: DailyMission
-  dateAssigned: string
+  missionId: string
+  missionName: string
+  missionDescription: string
+  milestone: number
+  dateAssigned: string | number[]
   currentProgress: number
   isCompleted: boolean
   completedAt: string | null
+  createdAt: string
+  updatedAt: string
 }
 
 export const ACHIEVEMENT_EVENT_TYPES = [
