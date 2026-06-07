@@ -185,7 +185,7 @@ export function CommentCard({
             <div className="flex flex-wrap items-center gap-2">
               {isDeletedComment ? (
                 <span className="font-semibold text-sm text-muted-foreground italic">
-                  [Pengguna dihapus]
+                  [deleted]
                 </span>
               ) : (
                 <Link
