@@ -2,7 +2,6 @@
 
 import { useEffect, useState, use } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { ArrowLeft, CheckCircle2, MessageSquare, BookOpen } from "lucide-react";
 import { useAuth } from "@/app/providers/AuthProvider";
 import { useAchievement } from "@/app/providers/AchievementProvider";
@@ -23,7 +22,6 @@ export default function ReadingPage({
   params: Promise<{ readingId: string }>;
 }) {
   const { readingId } = use(params);
-  const router = useRouter();
   const { userId } = useAuth();
   const { triggerAndNotify } = useAchievement();
 

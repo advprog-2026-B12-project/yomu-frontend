@@ -93,10 +93,7 @@ export default function QuizPage({
   }, [readingId])
 
   useEffect(() => {
-    if (!userId) {
-      if (!isLoading) setCheckingStatus(false)
-      return
-    }
+    if (!userId) return
     const token = localStorage.getItem("token")
     fetch(`${API}/api/quiz/status/${readingId}`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
@@ -119,7 +116,7 @@ export default function QuizPage({
       })
       .catch(() => {})
       .finally(() => setCheckingStatus(false))
-  }, [readingId, userId, isLoading])
+  }, [readingId, userId])
 
   function handleSelect(questionId: string, optionId: string) {
     if (submitted) return
