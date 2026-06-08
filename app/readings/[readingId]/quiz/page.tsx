@@ -2,8 +2,8 @@
 
 import { useEffect, useState, use } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { ArrowLeft, CheckCircle } from "lucide-react"
+import { useRouter, useSearchParams } from "next/navigation"
+import { ArrowLeft, CheckCircle2, MessageSquare } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -50,6 +50,7 @@ export default function QuizPage({
 }) {
   const { readingId } = use(params)
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { userId, username, isLoading } = useAuth()
   const { triggerAndNotify } = useAchievement()
 
@@ -61,13 +62,29 @@ export default function QuizPage({
 
   const [reading, setReading] = useState<Reading | null>(null)
   const [loadError, setLoadError] = useState("")
-  const [started, setStarted] = useState(false)
-  const [answers, setAnswers] = useState<Record<string, string>>({})
+  const autostart = searchParams.get("autostart") === "true"
+  const [started, setStarted] = useState(autostart)
+  const [answers, setAnswers] = useState<Record<string, string>>(() => {
+    if (autostart && typeof window !== "undefined") {
+      try {
+        const raw = localStorage.getItem(`quiz_draft_${readingId}`)
+        if (raw) {
+          const { answers: saved, savedAt } = JSON.parse(raw)
+          const fresh = Date.now() - savedAt < 24 * 60 * 60 * 1000
+          if (fresh && saved) return saved
+          else localStorage.removeItem(`quiz_draft_${readingId}`)
+        }
+      } catch {}
+    }
+    return {}
+  })
   const [submitted, setSubmitted] = useState(false)
   const [score, setScore] = useState(0)
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState("")
   const [alreadyCompleted, setAlreadyCompleted] = useState(false)
+  const [cachedResult, setCachedResult] = useState<{ score: number; total: number } | null>(null)
+  const [checkingStatus, setCheckingStatus] = useState(true)
 
   useEffect(() => {
     getQuiz(readingId)
@@ -82,13 +99,32 @@ export default function QuizPage({
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     })
       .then((res) => res.json())
-      .then((data) => setAlreadyCompleted(data.completed))
+      .then((data) => {
+        setAlreadyCompleted(data.completed)
+        if (data.completed) {
+          if (data.score !== undefined && data.total !== undefined) {
+            setCachedResult({ score: data.score, total: data.total })
+            localStorage.setItem(
+              `quiz_result_${readingId}`,
+              JSON.stringify({ score: data.score, total: data.total })
+            )
+          } else {
+            const cached = localStorage.getItem(`quiz_result_${readingId}`)
+            if (cached) setCachedResult(JSON.parse(cached))
+          }
+        }
+      })
       .catch(() => {})
+      .finally(() => setCheckingStatus(false))
   }, [readingId, userId])
 
   function handleSelect(questionId: string, optionId: string) {
     if (submitted) return
-    setAnswers((prev) => ({ ...prev, [questionId]: optionId }))
+    setAnswers((prev) => {
+      const next = { ...prev, [questionId]: optionId }
+      localStorage.setItem(`quiz_draft_${readingId}`, JSON.stringify({ answers: next, savedAt: Date.now() }))
+      return next
+    })
   }
 
   async function handleSubmit() {
@@ -115,6 +151,8 @@ export default function QuizPage({
       if (!res.ok) {
         const text = await res.text()
         if (res.status === 409) {
+          const cached = localStorage.getItem(`quiz_result_${readingId}`)
+          if (cached) setCachedResult(JSON.parse(cached))
           setAlreadyCompleted(true)
           return
         }
@@ -124,6 +162,11 @@ export default function QuizPage({
       const result = await res.json()
       setScore(result.score)
       setSubmitted(true)
+      localStorage.setItem(
+        `quiz_result_${readingId}`,
+        JSON.stringify({ score: result.score, total: reading.questions.length })
+      )
+      localStorage.removeItem(`quiz_draft_${readingId}`)
 
       if (userId) {
         void triggerAndNotify(userId, "QUIZ_FINISHED")
@@ -151,7 +194,7 @@ export default function QuizPage({
     )
   }
 
-  if (!reading) {
+  if (!reading || checkingStatus) {
     return (
       <div className="flex flex-col min-h-screen bg-gray-50">
         <Navbar />
@@ -165,25 +208,47 @@ export default function QuizPage({
   }
 
   if (alreadyCompleted) {
+    const cachedTotal = cachedResult?.total ?? 0
+    const cachedScore = cachedResult?.score
+    const cachedPct =
+      cachedScore !== undefined && cachedTotal > 0
+        ? Math.round((cachedScore / cachedTotal) * 100)
+        : null
+
     return (
       <div className="flex flex-col min-h-screen bg-gray-50">
         <Navbar />
-        <main className="max-w-2xl mx-auto w-full px-4 py-8">
-          <Card>
-            <CardContent className="flex flex-col items-center gap-4 py-12">
-              <CheckCircle className="size-12 text-green-500" />
-              <p className="text-lg font-semibold">Quiz sudah dikerjakan</p>
-              <p className="text-sm text-muted-foreground">
-                Kamu sudah menyelesaikan quiz ini sebelumnya.
-              </p>
-              <Button asChild variant="outline">
-                <Link href={`/readings/${readingId}`}>
-                  <ArrowLeft className="size-4 mr-1.5" />
-                  Kembali ke Reading
-                </Link>
-              </Button>
-            </CardContent>
-          </Card>
+        <main className="max-w-2xl mx-auto w-full px-4 py-8 flex flex-col gap-6">
+          <Link href="/readings" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-gray-900">
+            <ArrowLeft className="size-4" />
+            Kembali ke Bacaan
+          </Link>
+          <div className="rounded-xl border border-green-200 bg-green-50 p-8 flex flex-col items-center gap-4">
+            <CheckCircle2 className="size-14 text-green-500" />
+            <p className="text-lg font-bold text-green-800">Quiz Sudah Selesai</p>
+            {cachedPct !== null && cachedScore !== undefined ? (
+              <div className="text-center">
+                <p className="text-3xl font-bold text-green-700">{cachedScore} / {cachedTotal}</p>
+                <p className="text-sm text-green-600 mt-1">{cachedPct}% benar</p>
+              </div>
+            ) : null}
+            <div className="flex gap-3 flex-wrap justify-center">
+              <Link
+                href={`/readings/${readingId}/discussion`}
+                className="inline-flex items-center gap-1.5 bg-black text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors"
+              >
+                <MessageSquare className="size-4" />
+                Buka Discussion
+              </Link>
+              <Link
+                href="/readings"
+                className="inline-flex items-center gap-1.5 bg-gray-200 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-300 transition-colors"
+              >
+                <ArrowLeft className="size-4" />
+                Kembali ke Bacaan
+              </Link>
+            </div>
+          </div>
         </main>
       </div>
     )
@@ -225,29 +290,35 @@ export default function QuizPage({
     return (
       <div className="flex flex-col min-h-screen bg-gray-50">
         <Navbar />
-        <main className="max-w-2xl mx-auto w-full px-4 py-8">
-          <Card>
-            <CardContent className="flex flex-col items-center gap-6 py-12">
-              <CheckCircle className="size-14 text-green-500" />
-              <div className="text-center">
-                <p className="text-2xl font-bold">{score} / {total}</p>
-                <p className="text-sm text-muted-foreground mt-1">{percentage}% benar</p>
-              </div>
-              <p className="text-sm text-center text-muted-foreground max-w-xs">
-                {percentage >= 80
-                  ? "Luar biasa! Kamu sangat menguasai materi ini."
-                  : percentage >= 60
-                  ? "Bagus! Terus belajar untuk hasil yang lebih baik."
-                  : "Jangan menyerah, coba baca ulang materinya!"}
-              </p>
-              <Button asChild variant="outline">
-                <Link href={`/readings/${readingId}`}>
-                  <ArrowLeft className="size-4 mr-1.5" />
-                  Kembali ke Reading
-                </Link>
-              </Button>
-            </CardContent>
-          </Card>
+        <main className="max-w-2xl mx-auto w-full px-4 py-8 flex flex-col gap-6">
+          <Link href="/readings" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-gray-900">
+            <ArrowLeft className="size-4" />
+            Kembali ke Bacaan
+          </Link>
+          <div className="rounded-xl border border-green-200 bg-green-50 p-8 flex flex-col items-center gap-4">
+            <CheckCircle2 className="size-14 text-green-500" />
+            <p className="text-lg font-bold text-green-800">Quiz Sudah Selesai</p>
+            <div className="text-center">
+              <p className="text-3xl font-bold text-green-700">{score} / {total}</p>
+              <p className="text-sm text-green-600 mt-1">{percentage}% benar</p>
+            </div>
+            <div className="flex gap-3 flex-wrap justify-center">
+              <Link
+                href={`/readings/${readingId}/discussion`}
+                className="inline-flex items-center gap-1.5 bg-black text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors"
+              >
+                <MessageSquare className="size-4" />
+                Buka Discussion
+              </Link>
+              <Link
+                href="/readings"
+                className="inline-flex items-center gap-1.5 bg-gray-200 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-300 transition-colors"
+              >
+                <ArrowLeft className="size-4" />
+                Kembali ke Bacaan
+              </Link>
+            </div>
+          </div>
         </main>
       </div>
     )
